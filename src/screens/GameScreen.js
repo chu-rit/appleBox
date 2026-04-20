@@ -1,64 +1,128 @@
-import React, { useState, useCallback, useRef } from 'react';
+import React, { useState, useRef, useCallback, useEffect, useMemo } from 'react';
 import {
   View,
   Text,
   StyleSheet,
   Dimensions,
-  Alert,
-  PanResponder,
 } from 'react-native';
+import { Gesture, GestureDetector, GestureHandlerRootView } from 'react-native-gesture-handler';
+import Animated, {
+  useSharedValue,
+  useAnimatedStyle,
+  withTiming,
+  withSpring,
+} from 'react-native-reanimated';
 
-const { width, height } = Dimensions.get('window');
-
-const GRID_SIZE = 12;
+const { width } = Dimensions.get('window');
+const GRID_SIZE = 7;
 const CELL_SIZE = Math.floor((width - 40) / GRID_SIZE);
 const APPLE_EMOJI = '🍎';
 
-// Generate random board (1-9)
-const generateBoard = () => {
+// Generate weighted random value (1-9) based on probabilities
+const generateWeightedValue = (lowProb, highProb) => {
+  const random = Math.random() * 100;
+  // lowProb = 1-5 probability, highProb = 6-9 probability
+  if (random < lowProb) {
+    // 1-5 range
+    return Math.floor(Math.random() * 5) + 1;
+  } else {
+    // 6-9 range
+    return Math.floor(Math.random() * 4) + 6;
+  }
+};
+
+// Calculate probabilities based on score
+const getProbabilities = (currentScore) => {
+  // Start: 1-5 = 80%, 6-9 = 20%
+  // Every 100 points: 1-5 -5%, 6-9 +5%
+  // Max: 50-50
+  const level = Math.floor(currentScore / 100);
+  const lowProb = Math.max(50, 80 - level * 5); // 80, 75, 70, ... 50
+  const highProb = Math.min(50, 20 + level * 5); // 20, 25, 30, ... 50
+  return { lowProb, highProb };
+};
+
+// Generate random board (1-9) with weighted probabilities
+const generateBoard = (score = 0) => {
+  const { lowProb, highProb } = getProbabilities(score);
   return Array(GRID_SIZE).fill(null).map(() =>
     Array(GRID_SIZE).fill(null).map(() => ({
-      value: Math.floor(Math.random() * 9) + 1,
+      value: generateWeightedValue(lowProb, highProb),
       removed: false,
     }))
   );
 };
 
+const CELL_MARGIN = 2;
+
+const MAX_TIME = 20;
+const START_TIME = 15;
+
 export default function GameScreen({ onBackToStart }) {
-  const [board, setBoard] = useState(generateBoard());
   const [score, setScore] = useState(0);
-  const [moves, setMoves] = useState(0);
-  const boardRef = useRef(null);
-  const [boardOffset, setBoardOffset] = useState({ x: 0, y: 0 });
-  
-  // Selection rectangle state
+  const [board, setBoard] = useState(() => generateBoard(0));
   const [selection, setSelection] = useState(null);
-  const [dragStart, setDragStart] = useState(null);
-
-  const updateBoardOffset = () => {
-    if (boardRef.current) {
-      boardRef.current.measure((x, y, width, height, pageX, pageY) => {
-        setBoardOffset({ x: pageX, y: pageY });
-      });
-    }
-  };
-
-  const getCellFromLocation = (pageX, pageY) => {
-    const col = Math.floor((pageX - boardOffset.x) / CELL_SIZE);
-    const row = Math.floor((pageY - boardOffset.y) / CELL_SIZE);
-    return { 
-      row: Math.max(0, Math.min(GRID_SIZE - 1, row)), 
-      col: Math.max(0, Math.min(GRID_SIZE - 1, col)) 
-    };
-  };
-
-  const calculateSum = useCallback((startRow, startCol, endRow, endCol) => {
-    let sum = 0;
-    const minRow = Math.min(startRow, endRow);
-    const maxRow = Math.max(startRow, endRow);
-    const minCol = Math.min(startCol, endCol);
-    const maxCol = Math.max(startCol, endCol);
+  const [dragRect, setDragRect] = useState(null);
+  const [isDragging, setIsDragging] = useState(false);
+  const [timeLeft, setTimeLeft] = useState(START_TIME);
+  const [gameOver, setGameOver] = useState(false);
+  const dragStartPos = useRef({ x: 0, y: 0 });
+  const selectionRef = useRef(null);
+  const timerRef = useRef(null);
+  
+  // Reanimated shared values for cell animations (7x7 grid)
+  const cellAnims = useRef(
+    Array(GRID_SIZE).fill(null).map(() =>
+      Array(GRID_SIZE).fill(null).map(() => ({
+        opacity: useSharedValue(1),
+        scale: useSharedValue(1),
+      }))
+    )
+  ).current;
+  
+  // Score pop animation
+  const scoreScale = useSharedValue(1);
+  
+  // Timer countdown
+  useEffect(() => {
+    if (gameOver) return;
     
+    timerRef.current = setInterval(() => {
+      setTimeLeft(prev => {
+        if (prev <= 0.1) {
+          setGameOver(true);
+          return 0;
+        }
+        return Math.max(0, prev - 0.1);
+      });
+    }, 100);
+    
+    return () => clearInterval(timerRef.current);
+  }, [gameOver]);
+  
+  // Prevent context menu globally
+  useEffect(() => {
+    const preventContextMenu = (e) => {
+      e.preventDefault();
+      return false;
+    };
+    
+    document.addEventListener('contextmenu', preventContextMenu, true);
+    
+    return () => {
+      document.removeEventListener('contextmenu', preventContextMenu, true);
+    };
+  }, []);
+
+  // Calculate sum of selected area (regular function, not useCallback)
+  const calculateSum = (sel) => {
+    if (!sel) return { sum: 0, minRow: 0, maxRow: 0, minCol: 0, maxCol: 0 };
+    const minRow = Math.min(sel.startRow, sel.endRow);
+    const maxRow = Math.max(sel.startRow, sel.endRow);
+    const minCol = Math.min(sel.startCol, sel.endCol);
+    const maxCol = Math.max(sel.startCol, sel.endCol);
+    
+    let sum = 0;
     for (let r = minRow; r <= maxRow; r++) {
       for (let c = minCol; c <= maxCol; c++) {
         if (!board[r][c].removed) {
@@ -67,72 +131,142 @@ export default function GameScreen({ onBackToStart }) {
       }
     }
     return { sum, minRow, maxRow, minCol, maxCol };
-  }, [board]);
-
-  const removeApples = (minRow, maxRow, minCol, maxCol) => {
-    setBoard(prev => {
-      const newBoard = prev.map(row => row.map(cell => ({ ...cell })));
-      for (let r = minRow; r <= maxRow; r++) {
-        for (let c = minCol; c <= maxCol; c++) {
-          newBoard[r][c].removed = true;
+  };
+  
+  // Memoize current sum for display
+  const currentSum = useMemo(() => calculateSum(selection), [selection, board]);
+  
+  // Calculate number of possible combinations that sum to 10
+  const possibleCombinations = useMemo(() => {
+    let count = 0;
+    
+    // Check all possible rectangles
+    for (let r1 = 0; r1 < GRID_SIZE; r1++) {
+      for (let c1 = 0; c1 < GRID_SIZE; c1++) {
+        for (let r2 = r1; r2 < GRID_SIZE; r2++) {
+          for (let c2 = c1; c2 < GRID_SIZE; c2++) {
+            let sum = 0;
+            let hasValue = false;
+            
+            for (let r = r1; r <= r2; r++) {
+              for (let c = c1; c <= c2; c++) {
+                if (!board[r][c].removed && board[r][c].value > 0) {
+                  sum += board[r][c].value;
+                  hasValue = true;
+                }
+              }
+            }
+            
+            // Only count if sum is exactly 10 and has at least 2 cells
+            const cellCount = (r2 - r1 + 1) * (c2 - c1 + 1);
+            if (sum === 10 && hasValue && cellCount >= 2) {
+              count++;
+            }
+          }
         }
       }
-      return newBoard;
-    });
-    
-    const count = (maxRow - minRow + 1) * (maxCol - minCol + 1);
-    setScore(s => s + count * 10);
-    setMoves(m => m + 1);
-  };
-
-  const handleDragStart = (row, col) => {
-    setDragStart({ row, col });
-    setSelection({ startRow: row, startCol: col, endRow: row, endCol: col });
-  };
-
-  const handleDragMove = (row, col) => {
-    if (!dragStart) return;
-    setSelection({
-      startRow: dragStart.row,
-      startCol: dragStart.col,
-      endRow: row,
-      endCol: col,
-    });
-  };
-
-  const handleDragEnd = () => {
-    if (!selection) return;
-    
-    const { startRow, startCol, endRow, endCol } = selection;
-    const { sum, minRow, maxRow, minCol, maxCol } = calculateSum(startRow, startCol, endRow, endCol);
-    
-    if (sum === 10) {
-      removeApples(minRow, maxRow, minCol, maxCol);
     }
     
-    setSelection(null);
-    setDragStart(null);
+    return count;
+  }, [board]);
+  
+  // Calculate time bonus based on apple count
+  const calculateTimeBonus = (count) => {
+    if (count === 2) return 4;
+    if (count === 3) return 6;
+    return 8; // 4 or more
   };
+  
+  // Add time to timer (capped at MAX_TIME)
+  const addTime = useCallback((bonusSeconds) => {
+    setTimeLeft(prev => Math.min(MAX_TIME, prev + bonusSeconds));
+  }, []);
 
-  const resetGame = () => {
-    Alert.alert(
-      'New Game',
-      'Start a new game?',
-      [
-        { text: 'Cancel', style: 'cancel' },
-        { text: 'OK', onPress: () => {
-          setBoard(generateBoard());
-          setScore(0);
-          setMoves(0);
-          setSelection(null);
-          setDragStart(null);
-        }}
-      ]
-    );
+  // Remove apples with simple animations
+  const removeApples = useCallback((minRow, maxRow, minCol, maxCol) => {
+    const count = (maxRow - minRow + 1) * (maxCol - minCol + 1);
+    const timeBonus = calculateTimeBonus(count);
+    const newScore = score + count * 10;
+    
+    // Step 1: Fade out removed cells
+    for (let r = minRow; r <= maxRow; r++) {
+      for (let c = minCol; c <= maxCol; c++) {
+        const anims = cellAnims[r][c];
+        anims.opacity.value = withTiming(0, { duration: 200 });
+        anims.scale.value = withTiming(0.8, { duration: 200 });
+      }
+    }
+    
+    // Step 2: Update board
+    setTimeout(() => {
+      setScore(newScore);
+      addTime(timeBonus);
+      scoreScale.value = withSpring(1.15, { damping: 12 });
+      
+      setBoard(prev => {
+        const newBoard = prev.map(row => row.map(cell => ({ ...cell })));
+        
+        for (let r = minRow; r <= maxRow; r++) {
+          for (let c = minCol; c <= maxCol; c++) {
+            newBoard[r][c].removed = true;
+          }
+        }
+        
+        // Gravity: move existing apples down
+        for (let c = minCol; c <= maxCol; c++) {
+          // First, mark all positions as empty (will be filled from bottom)
+          const columnCells = [];
+          for (let r = 0; r < GRID_SIZE; r++) {
+            if (!newBoard[r][c].removed) {
+              columnCells.push({ ...newBoard[r][c] });
+            }
+          }
+          
+          // Fill from bottom with existing cells
+          let writeRow = GRID_SIZE - 1;
+          for (let i = columnCells.length - 1; i >= 0; i--) {
+            newBoard[writeRow][c] = columnCells[i];
+            writeRow--;
+          }
+          
+          // Fill remaining top positions with new apples
+          const { lowProb, highProb } = getProbabilities(newScore);
+          for (let r = 0; r <= writeRow; r++) {
+            newBoard[r][c] = { value: generateWeightedValue(lowProb, highProb), removed: false };
+            const anims = cellAnims[r][c];
+            anims.opacity.value = 0;
+            anims.scale.value = 0.8;
+          }
+        }
+        
+        return newBoard;
+      });
+      
+      // Step 3: Fade in new apples
+      setTimeout(() => {
+        for (let c = minCol; c <= maxCol; c++) {
+          for (let r = 0; r < GRID_SIZE; r++) {
+            const anims = cellAnims[r][c];
+            anims.opacity.value = withTiming(1, { duration: 250 });
+            anims.scale.value = withSpring(1, { damping: 15 });
+          }
+        }
+      }, 50);
+    }, 200);
+  }, [board, score, cellAnims, scoreScale]);
+
+  // Get cell from position
+  const getCellFromPos = (x, y) => {
+    const col = Math.floor(x / (CELL_SIZE + CELL_MARGIN * 2));
+    const row = Math.floor(y / (CELL_SIZE + CELL_MARGIN * 2));
+    return {
+      row: Math.max(0, Math.min(GRID_SIZE - 1, row)),
+      col: Math.max(0, Math.min(GRID_SIZE - 1, col)),
+    };
   };
 
   const isInSelection = (row, col) => {
-    if (!selection) return false;
+    if (!selection || !isDragging) return false;
     const minRow = Math.min(selection.startRow, selection.endRow);
     const maxRow = Math.max(selection.startRow, selection.endRow);
     const minCol = Math.min(selection.startCol, selection.endCol);
@@ -140,93 +274,242 @@ export default function GameScreen({ onBackToStart }) {
     return row >= minRow && row <= maxRow && col >= minCol && col <= maxCol;
   };
 
-  const currentSum = selection ? calculateSum(selection.startRow, selection.startCol, selection.endRow, selection.endCol).sum : 0;
-  const remaining = board.flat().filter(c => !c.removed).length;
+  // Gesture Handler callbacks
+  const onDragStart = useCallback((x, y) => {
+    dragStartPos.current = { x, y };
+    setIsDragging(true);
+    
+    const cell = getCellFromPos(x, y);
+    const newSelection = {
+      startRow: cell.row,
+      startCol: cell.col,
+      endRow: cell.row,
+      endCol: cell.col,
+    };
+    
+    selectionRef.current = newSelection;
+    setSelection(newSelection);
+    
+    setDragRect({
+      x1: x,
+      y1: y,
+      x2: x,
+      y2: y,
+    });
+  }, []);
 
-  const panResponder = PanResponder.create({
-    onStartShouldSetPanResponder: () => true,
-    onMoveShouldSetPanResponder: () => true,
-    onPanResponderGrant: (evt) => {
-      updateBoardOffset();
-      const { pageX, pageY } = evt.nativeEvent;
-      const { row, col } = getCellFromLocation(pageX, pageY);
-      if (row >= 0 && row < GRID_SIZE && col >= 0 && col < GRID_SIZE) {
-        handleDragStart(row, col);
+  const onDragUpdate = useCallback((x, y) => {
+    setDragRect({
+      x1: dragStartPos.current.x,
+      y1: dragStartPos.current.y,
+      x2: x,
+      y2: y,
+    });
+    
+    const startCell = getCellFromPos(dragStartPos.current.x, dragStartPos.current.y);
+    const endCell = getCellFromPos(x, y);
+    
+    const newSelection = {
+      startRow: startCell.row,
+      startCol: startCell.col,
+      endRow: endCell.row,
+      endCol: endCell.col,
+    };
+    
+    selectionRef.current = newSelection;
+    setSelection(newSelection);
+  }, []);
+
+  const onDragEnd = useCallback(() => {
+    const currentSelection = selectionRef.current;
+    
+    // Clear visual selection immediately
+    selectionRef.current = null;
+    setIsDragging(false);
+    setSelection(null);
+    setDragRect(null);
+    
+    // Check sum after visual cleared
+    if (currentSelection) {
+      const { sum, minRow, maxRow, minCol, maxCol } = calculateSum(currentSelection);
+      if (sum === 10) {
+        removeApples(minRow, maxRow, minCol, maxCol);
       }
-    },
-    onPanResponderMove: (evt) => {
-      const { pageX, pageY } = evt.nativeEvent;
-      const { row, col } = getCellFromLocation(pageX, pageY);
-      if (row >= 0 && row < GRID_SIZE && col >= 0 && col < GRID_SIZE) {
-        handleDragMove(row, col);
-      }
-    },
-    onPanResponderRelease: handleDragEnd,
-    onPanResponderTerminate: handleDragEnd,
-  });
+    }
+  }, [removeApples]);
+
+  const panGesture = Gesture.Pan()
+    .onBegin((e) => {
+      onDragStart(e.x, e.y);
+    })
+    .onUpdate((e) => {
+      onDragUpdate(e.x, e.y);
+    })
+    .onEnd(() => {
+      onDragEnd();
+    })
+    .onFinalize(() => {
+      // Ensure cleanup happens even if gesture fails
+      onDragEnd();
+    });
 
   return (
     <View style={styles.container}>
       <View style={styles.header}>
         <Text style={styles.backText} onPress={onBackToStart}>←</Text>
         <Text style={styles.title}>APPLE BOX</Text>
-        <Text style={styles.resetText} onPress={resetGame}>↻</Text>
+        <Text style={styles.resetText}>↻</Text>
       </View>
 
       <View style={styles.stats}>
-        <View style={styles.statBox}>
+        <Animated.View style={styles.statBox}>
           <Text style={styles.statLabel}>SCORE</Text>
-          <Text style={styles.statValue}>{score}</Text>
-        </View>
+          <ScoreDisplay score={score} scale={scoreScale} />
+        </Animated.View>
         <View style={styles.statBox}>
           <Text style={styles.statLabel}>SUM</Text>
-          <Text style={[styles.statValue, currentSum === 10 && styles.sumPerfect, currentSum > 10 && styles.sumOver]}>
-            {currentSum}
+          <Text style={[styles.statValue, selection && currentSum.sum === 10 && styles.sumPerfect]}>
+            {selection ? currentSum.sum : 0}
           </Text>
         </View>
         <View style={styles.statBox}>
-          <Text style={styles.statLabel}>LEFT</Text>
-          <Text style={styles.statValue}>{remaining}</Text>
+          <Text style={styles.statLabel}>POSSIBLE</Text>
+          <Text style={[styles.statValue, styles.possibleValue]}>
+            {possibleCombinations}
+          </Text>
         </View>
       </View>
 
-      <View style={styles.hint}>
-        <Text style={styles.hintText}>Drag to select rectangle with sum = 10</Text>
-      </View>
+      <TimerBar timeLeft={timeLeft} maxTime={MAX_TIME} />
 
-      <View style={styles.boardContainer} ref={boardRef} {...panResponder.panHandlers}>
-        {board.map((row, rowIndex) => (
-          <View key={rowIndex} style={styles.row}>
-            {row.map((cell, colIndex) => (
-              <View
-                key={colIndex}
-                style={[
-                  styles.cell,
-                  { width: CELL_SIZE, height: CELL_SIZE },
-                  isInSelection(rowIndex, colIndex) && styles.cellSelected,
-                  cell.removed && styles.cellRemoved,
-                ]}
-              >
-                {!cell.removed && (
-                  <>
-                    <Text style={styles.apple}>{APPLE_EMOJI}</Text>
-                    <Text style={[styles.number, isInSelection(rowIndex, colIndex) && styles.numberSelected]}>
-                      {cell.value}
-                    </Text>
-                  </>
-                )}
-              </View>
-            ))}
+      {gameOver && (
+        <View style={styles.gameOverOverlay}>
+          <Text style={styles.gameOverText}>GAME OVER</Text>
+          <Text style={styles.gameOverScore}>Score: {score}</Text>
+          <Text style={styles.gameOverHint} onPress={onBackToStart}>
+            ← Back to Menu
+          </Text>
+        </View>
+      )}
+
+      <GestureHandlerRootView style={[styles.board, gameOver && styles.boardDisabled]}>
+        <GestureDetector gesture={panGesture}>
+        <View style={styles.gridWrapper}>
+          {dragRect && (
+            <View
+              style={[
+                styles.dragOverlay,
+                {
+                  left: Math.min(dragRect.x1, dragRect.x2),
+                  top: Math.min(dragRect.y1, dragRect.y2),
+                  width: Math.abs(dragRect.x2 - dragRect.x1),
+                  height: Math.abs(dragRect.y2 - dragRect.y1),
+                },
+              ]}
+            />
+          )}
+          {board.map((row, rowIndex) => (
+            <View key={rowIndex} style={styles.row}>
+              {row.map((cell, colIndex) => (
+                <Cell
+                  key={colIndex}
+                  cell={cell}
+                  rowIndex={rowIndex}
+                  colIndex={colIndex}
+                  anims={cellAnims[rowIndex][colIndex]}
+                  isSelected={isInSelection(rowIndex, colIndex)}
+                  cellSize={CELL_SIZE}
+                />
+              ))}
+            </View>
+          ))}
           </View>
-        ))}
-      </View>
-
-      <View style={styles.footer}>
-        <Text style={styles.moves}>Moves: {moves}</Text>
-      </View>
+        </GestureDetector>
+      </GestureHandlerRootView>
     </View>
   );
 }
+
+// Separate Cell component for reanimated
+function Cell({ cell, anims, isSelected, cellSize }) {
+  const animatedStyle = useAnimatedStyle(() => ({
+    opacity: anims.opacity.value,
+    transform: [
+      { scale: isSelected ? 0.95 : anims.scale.value },
+    ],
+  }));
+
+  return (
+    <Animated.View
+      style={[
+        styles.cell,
+        { width: cellSize, height: cellSize },
+        animatedStyle,
+        isSelected && styles.cellSelected,
+      ]}
+    >
+      {cell.value > 0 && (
+        <>
+          <Text style={styles.apple}>{APPLE_EMOJI}</Text>
+          <Text style={styles.number}>{cell.value}</Text>
+        </>
+      )}
+    </Animated.View>
+  );
+}
+
+// Animated score display component
+function ScoreDisplay({ score, scale }) {
+  const animatedStyle = useAnimatedStyle(() => ({
+    transform: [{ scale: scale.value }],
+  }));
+
+  return (
+    <Animated.Text style={[styles.statValue, animatedStyle]}>
+      {score}
+    </Animated.Text>
+  );
+}
+
+// Timer bar with hedgehog chasing farmer
+function TimerBar({ timeLeft, maxTime }) {
+  const progress = timeLeft / maxTime;
+  
+  return (
+    <View style={timerStyles.container}>
+      <Text style={timerStyles.emoji}>🦔</Text>
+      <View style={timerStyles.track}>
+        <View style={[timerStyles.fill, { width: `${progress * 100}%` }]} />
+      </View>
+      <Text style={timerStyles.emoji}>👨‍🌾</Text>
+    </View>
+  );
+}
+
+const timerStyles = StyleSheet.create({
+  container: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 20,
+    marginVertical: 8,
+  },
+  emoji: {
+    fontSize: 24,
+  },
+  track: {
+    flex: 1,
+    height: 12,
+    backgroundColor: '#E0E0E0',
+    borderRadius: 6,
+    marginHorizontal: 8,
+    overflow: 'hidden',
+  },
+  fill: {
+    height: '100%',
+    backgroundColor: '#4CAF50',
+    borderRadius: 6,
+  },
+});
 
 const styles = StyleSheet.create({
   container: {
@@ -301,22 +584,68 @@ const styles = StyleSheet.create({
   sumPerfect: {
     color: '#4CAF50',
   },
-  sumOver: {
-    color: '#FF4444',
+  possibleValue: {
+    color: '#FF6B6B',
   },
-  hint: {
-    alignItems: 'center',
-    marginBottom: 10,
-  },
-  hintText: {
-    fontSize: 14,
-    color: '#8B7355',
-  },
-  boardContainer: {
+  board: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    paddingHorizontal: 20,
+  },
+  boardDisabled: {
+    opacity: 0.3,
+  },
+  gameOverOverlay: {
+    position: 'absolute',
+    top: '40%',
+    left: 20,
+    right: 20,
+    backgroundColor: '#FFF8E7',
+    borderRadius: 20,
+    padding: 30,
+    alignItems: 'center',
+    zIndex: 1000,
+    shadowColor: '#FF6B6B',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 12,
+    elevation: 8,
+    borderWidth: 3,
+    borderColor: '#FF6B6B',
+  },
+  gameOverText: {
+    fontSize: 36,
+    fontWeight: '900',
+    color: '#FF4444',
+    marginBottom: 12,
+    letterSpacing: 2,
+  },
+  gameOverScore: {
+    fontSize: 24,
+    color: '#8B7355',
+    fontWeight: 'bold',
+    marginBottom: 24,
+  },
+  gameOverHint: {
+    fontSize: 16,
+    color: '#FFF',
+    backgroundColor: '#FF6B6B',
+    paddingHorizontal: 24,
+    paddingVertical: 12,
+    borderRadius: 25,
+    fontWeight: 'bold',
+    overflow: 'hidden',
+  },
+  gridWrapper: {
+    position: 'relative',
+  },
+  dragOverlay: {
+    position: 'absolute',
+    backgroundColor: 'rgba(255, 68, 68, 0.3)',
+    borderWidth: 2,
+    borderColor: '#FF4444',
+    zIndex: 100,
+    pointerEvents: 'none',
   },
   row: {
     flexDirection: 'row',
@@ -324,48 +653,32 @@ const styles = StyleSheet.create({
   cell: {
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: '#FFE4E1',
-    margin: 1,
-    borderRadius: 4,
-    borderWidth: 1,
-    borderColor: '#FFB6C1',
+    backgroundColor: '#FF6B6B',
+    margin: CELL_MARGIN,
+    borderRadius: 12,
+    borderWidth: 2,
+    borderColor: '#FF4757',
+    shadowColor: '#C0392B',
+    shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: 0.4,
+    shadowRadius: 4,
+    elevation: 5,
   },
   cellSelected: {
-    backgroundColor: '#FF6B6B',
-    borderColor: '#FF4444',
-  },
-  cellRemoved: {
-    backgroundColor: 'transparent',
-    borderColor: 'transparent',
+    backgroundColor: '#FFD93D',
+    borderColor: '#F39C12',
+    shadowColor: '#D68910',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.6,
+    elevation: 8,
   },
   apple: {
-    fontSize: 20,
-    userSelect: 'none',
-    WebkitUserSelect: 'none',
+    fontSize: 28,
   },
   number: {
     position: 'absolute',
-    bottom: 2,
-    right: 4,
-    fontSize: 12,
+    fontSize: 16,
     fontWeight: 'bold',
-    color: '#333',
-    userSelect: 'none',
-    WebkitUserSelect: 'none',
-  },
-  numberSelected: {
     color: '#FFF',
-    userSelect: 'none',
-    WebkitUserSelect: 'none',
-  },
-  footer: {
-    padding: 20,
-    alignItems: 'center',
-  },
-  moves: {
-    fontSize: 14,
-    color: '#8B7355',
-    userSelect: 'none',
-    WebkitUserSelect: 'none',
   },
 });
