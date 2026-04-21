@@ -11,6 +11,7 @@ import Animated, {
   useAnimatedStyle,
   withTiming,
   withSpring,
+  withSequence,
 } from 'react-native-reanimated';
 
 const { width } = Dimensions.get('window');
@@ -551,12 +552,13 @@ function ScoreDisplay({ score, scale }) {
 // Timer bar with hedgehog chasing farmer
 function TimerBar({ timeLeft, maxTime }) {
   const progress = timeLeft / maxTime;
-  
+  const fillColor = progress > 0.5 ? '#4CAF50' : progress > 0.3 ? '#FF9800' : '#FF4444';
+
   return (
     <View style={timerStyles.container}>
       <Text style={timerStyles.emoji}>🦔</Text>
       <View style={timerStyles.track}>
-        <View style={[timerStyles.fill, { width: `${progress * 100}%` }]} />
+        <View style={[timerStyles.fill, { width: `${progress * 100}%`, backgroundColor: fillColor }]} />
       </View>
       <Text style={timerStyles.emoji}>👨‍🌾</Text>
     </View>
