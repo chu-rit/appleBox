@@ -57,9 +57,10 @@ const CELL_MARGIN = 2;
 
 const MAX_TIME = 20;
 const START_TIME = 15;
+const START_STEP = 7;
 
 export default function GameScreen({ onBackToStart }) {
-  const [score, setScore] = useState(0);
+  const [step, setStep] = useState(START_STEP);
   const [board, setBoard] = useState(() => generateBoard(0));
   const [selection, setSelection] = useState(null);
   const [dragRect, setDragRect] = useState(null);
@@ -76,6 +77,7 @@ export default function GameScreen({ onBackToStart }) {
       Array(GRID_SIZE).fill(null).map(() => ({
         opacity: useSharedValue(1),
         scale: useSharedValue(1),
+        translateY: useSharedValue(0),
       }))
     )
   ).current;
@@ -136,39 +138,82 @@ export default function GameScreen({ onBackToStart }) {
   // Memoize current sum for display
   const currentSum = useMemo(() => calculateSum(selection), [selection, board]);
   
-  // Calculate number of possible combinations that sum to 10
-  const possibleCombinations = useMemo(() => {
-    let count = 0;
-    
-    // Check all possible rectangles
+  // Assist mode state
+  const [assistMode, setAssistMode] = useState(false);
+  const assistTapCount = useRef(0);
+  const assistTapTimer = useRef(null);
+
+  const handlePossibleTap = useCallback(() => {
+    assistTapCount.current += 1;
+    clearTimeout(assistTapTimer.current);
+    if (assistTapCount.current >= 3) {
+      assistTapCount.current = 0;
+      setAssistMode(prev => !prev);
+    } else {
+      assistTapTimer.current = setTimeout(() => {
+        assistTapCount.current = 0;
+      }, 600);
+    }
+  }, []);
+
+  // Find all possible combinations for current step target
+  const combos = useMemo(() => {
+    const result = [];
     for (let r1 = 0; r1 < GRID_SIZE; r1++) {
       for (let c1 = 0; c1 < GRID_SIZE; c1++) {
         for (let r2 = r1; r2 < GRID_SIZE; r2++) {
           for (let c2 = c1; c2 < GRID_SIZE; c2++) {
             let sum = 0;
-            let hasValue = false;
-            
             for (let r = r1; r <= r2; r++) {
               for (let c = c1; c <= c2; c++) {
-                if (!board[r][c].removed && board[r][c].value > 0) {
-                  sum += board[r][c].value;
-                  hasValue = true;
-                }
+                if (!board[r][c].removed) sum += board[r][c].value;
               }
             }
-            
-            // Only count if sum is exactly 10 and has at least 2 cells
             const cellCount = (r2 - r1 + 1) * (c2 - c1 + 1);
-            if (sum === 10 && hasValue && cellCount >= 2) {
-              count++;
-            }
+            if (sum === step && cellCount >= 2) result.push({ r1, c1, r2, c2 });
           }
         }
       }
     }
-    
-    return count;
-  }, [board]);
+    return result;
+  }, [board, step]);
+
+  const possibleCombinations = combos.length;
+
+  // Pick up to 5 non-overlapping combos for assist mode
+  const assistCombos = useMemo(() => {
+    const picked = [];
+    const usedCells = new Set();
+    for (const combo of combos) {
+      let overlaps = false;
+      for (let r = combo.r1; r <= combo.r2; r++) {
+        for (let c = combo.c1; c <= combo.c2; c++) {
+          if (usedCells.has(`${r},${c}`)) { overlaps = true; break; }
+        }
+        if (overlaps) break;
+      }
+      if (!overlaps) {
+        picked.push(combo);
+        for (let r = combo.r1; r <= combo.r2; r++)
+          for (let c = combo.c1; c <= combo.c2; c++)
+            usedCells.add(`${r},${c}`);
+      }
+      if (picked.length >= 5) break;
+    }
+    return picked;
+  }, [combos]);
+  
+  // Reset board with new apples
+  const resetBoard = useCallback(() => {
+    const newBoard = generateBoard(step);
+    setBoard(newBoard);
+    for (let r = 0; r < GRID_SIZE; r++) {
+      for (let c = 0; c < GRID_SIZE; c++) {
+        cellAnims[r][c].opacity.value = withTiming(1, { duration: 300 });
+        cellAnims[r][c].scale.value = withSpring(1, { damping: 15 });
+      }
+    }
+  }, [step, cellAnims]);
   
   // Calculate time bonus based on apple count
   const calculateTimeBonus = (count) => {
@@ -186,7 +231,7 @@ export default function GameScreen({ onBackToStart }) {
   const removeApples = useCallback((minRow, maxRow, minCol, maxCol) => {
     const count = (maxRow - minRow + 1) * (maxCol - minCol + 1);
     const timeBonus = calculateTimeBonus(count);
-    const newScore = score + count * 10;
+    const newStep = step + 1;
     
     // Step 1: Fade out removed cells
     for (let r = minRow; r <= maxRow; r++) {
@@ -199,7 +244,7 @@ export default function GameScreen({ onBackToStart }) {
     
     // Step 2: Update board
     setTimeout(() => {
-      setScore(newScore);
+      setStep(newStep);
       addTime(timeBonus);
       scoreScale.value = withSpring(1.15, { damping: 12 });
       
@@ -214,46 +259,52 @@ export default function GameScreen({ onBackToStart }) {
         
         // Gravity: move existing apples down
         for (let c = minCol; c <= maxCol; c++) {
-          // First, mark all positions as empty (will be filled from bottom)
-          const columnCells = [];
+          const columnCells = []; // { cell, originalRow }
           for (let r = 0; r < GRID_SIZE; r++) {
             if (!newBoard[r][c].removed) {
-              columnCells.push({ ...newBoard[r][c] });
+              columnCells.push({ cell: { ...newBoard[r][c] }, originalRow: r });
             }
           }
-          
-          // Fill from bottom with existing cells
           let writeRow = GRID_SIZE - 1;
           for (let i = columnCells.length - 1; i >= 0; i--) {
-            newBoard[writeRow][c] = columnCells[i];
+            const { cell, originalRow } = columnCells[i];
+            newBoard[writeRow][c] = cell;
+            // Animate fall: start from original position
+            if (writeRow !== originalRow) {
+              const fallDist = (writeRow - originalRow) * (CELL_SIZE + CELL_MARGIN * 2);
+              const anims = cellAnims[writeRow][c];
+              anims.translateY.value = -fallDist;
+              anims.opacity.value = 1;
+            }
             writeRow--;
           }
-          
-          // Fill remaining top positions with new apples
-          const { lowProb, highProb } = getProbabilities(newScore);
+          const { lowProb, highProb } = getProbabilities(newStep);
           for (let r = 0; r <= writeRow; r++) {
             newBoard[r][c] = { value: generateWeightedValue(lowProb, highProb), removed: false };
+            const dropDist = (writeRow + 1) * (CELL_SIZE + CELL_MARGIN * 2);
             const anims = cellAnims[r][c];
-            anims.opacity.value = 0;
-            anims.scale.value = 0.8;
+            anims.opacity.value = 1;
+            anims.scale.value = 1;
+            anims.translateY.value = -dropDist; // Start above grid
           }
         }
         
         return newBoard;
       });
       
-      // Step 3: Fade in new apples
+      // Step 3: Animate all cells into position
       setTimeout(() => {
         for (let c = minCol; c <= maxCol; c++) {
           for (let r = 0; r < GRID_SIZE; r++) {
             const anims = cellAnims[r][c];
-            anims.opacity.value = withTiming(1, { duration: 250 });
+            anims.translateY.value = withSpring(0, { damping: 14, stiffness: 120 });
+            anims.opacity.value = withTiming(1, { duration: 150 });
             anims.scale.value = withSpring(1, { damping: 15 });
           }
         }
       }, 50);
     }, 200);
-  }, [board, score, cellAnims, scoreScale]);
+  }, [board, step, cellAnims, scoreScale]);
 
   // Get cell from position
   const getCellFromPos = (x, y) => {
@@ -332,11 +383,11 @@ export default function GameScreen({ onBackToStart }) {
     // Check sum after visual cleared
     if (currentSelection) {
       const { sum, minRow, maxRow, minCol, maxCol } = calculateSum(currentSelection);
-      if (sum === 10) {
+      if (sum === step) {
         removeApples(minRow, maxRow, minCol, maxCol);
       }
     }
-  }, [removeApples]);
+  }, [removeApples, step]);
 
   const panGesture = Gesture.Pan()
     .onBegin((e) => {
@@ -363,16 +414,10 @@ export default function GameScreen({ onBackToStart }) {
 
       <View style={styles.stats}>
         <Animated.View style={styles.statBox}>
-          <Text style={styles.statLabel}>SCORE</Text>
-          <ScoreDisplay score={score} scale={scoreScale} />
+          <Text style={styles.statLabel}>STEP</Text>
+          <ScoreDisplay score={step} scale={scoreScale} />
         </Animated.View>
-        <View style={styles.statBox}>
-          <Text style={styles.statLabel}>SUM</Text>
-          <Text style={[styles.statValue, selection && currentSum.sum === 10 && styles.sumPerfect]}>
-            {selection ? currentSum.sum : 0}
-          </Text>
-        </View>
-        <View style={styles.statBox}>
+        <View style={[styles.statBox, assistMode && styles.statBoxAssist]} onTouchEnd={handlePossibleTap}>
           <Text style={styles.statLabel}>POSSIBLE</Text>
           <Text style={[styles.statValue, styles.possibleValue]}>
             {possibleCombinations}
@@ -382,10 +427,17 @@ export default function GameScreen({ onBackToStart }) {
 
       <TimerBar timeLeft={timeLeft} maxTime={MAX_TIME} />
 
+      {!gameOver && possibleCombinations === 0 && (
+        <View style={styles.noComboBanner}>
+          <Text style={styles.noComboText}>No combinations available!</Text>
+          <Text style={styles.noComboBtn} onPress={resetBoard}>Refresh Board</Text>
+        </View>
+      )}
+
       {gameOver && (
         <View style={styles.gameOverOverlay}>
           <Text style={styles.gameOverText}>GAME OVER</Text>
-          <Text style={styles.gameOverScore}>Score: {score}</Text>
+          <Text style={styles.gameOverScore}>Reached Step: {step}</Text>
           <Text style={styles.gameOverHint} onPress={onBackToStart}>
             ← Back to Menu
           </Text>
@@ -395,6 +447,21 @@ export default function GameScreen({ onBackToStart }) {
       <GestureHandlerRootView style={[styles.board, gameOver && styles.boardDisabled]}>
         <GestureDetector gesture={panGesture}>
         <View style={styles.gridWrapper}>
+          {assistMode && assistCombos.map((combo, i) => (
+            <View
+              key={i}
+              pointerEvents="none"
+              style={[
+                styles.assistOverlay,
+                {
+                  left: combo.c1 * (CELL_SIZE + CELL_MARGIN * 2),
+                  top: combo.r1 * (CELL_SIZE + CELL_MARGIN * 2),
+                  width: (combo.c2 - combo.c1 + 1) * (CELL_SIZE + CELL_MARGIN * 2) - CELL_MARGIN * 2,
+                  height: (combo.r2 - combo.r1 + 1) * (CELL_SIZE + CELL_MARGIN * 2) - CELL_MARGIN * 2,
+                },
+              ]}
+            />
+          ))}
           {dragRect && (
             <View
               style={[
@@ -406,7 +473,16 @@ export default function GameScreen({ onBackToStart }) {
                   height: Math.abs(dragRect.y2 - dragRect.y1),
                 },
               ]}
-            />
+            >
+              <View style={styles.sumBadgeWrapper}>
+                <Text style={[
+                  styles.sumBadge,
+                  currentSum.sum === step && styles.sumBadgePerfect,
+                ]}>
+                  {currentSum.sum}
+                </Text>
+              </View>
+            </View>
           )}
           {board.map((row, rowIndex) => (
             <View key={rowIndex} style={styles.row}>
@@ -435,6 +511,7 @@ function Cell({ cell, anims, isSelected, cellSize }) {
   const animatedStyle = useAnimatedStyle(() => ({
     opacity: anims.opacity.value,
     transform: [
+      { translateY: anims.translateY.value },
       { scale: isSelected ? 0.95 : anims.scale.value },
     ],
   }));
@@ -581,8 +658,23 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
     color: '#333',
   },
-  sumPerfect: {
-    color: '#4CAF50',
+  sumBadgeWrapper: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    pointerEvents: 'none',
+  },
+  sumBadge: {
+    color: '#FFF',
+    fontWeight: '900',
+    fontSize: 22,
+    textShadowColor: 'rgba(0,0,0,0.6)',
+    textShadowOffset: { width: 0, height: 1 },
+    textShadowRadius: 4,
+  },
+  sumBadgePerfect: {
+    color: '#AFFFB0',
+    textShadowColor: 'rgba(0,100,0,0.5)',
   },
   possibleValue: {
     color: '#FF6B6B',
@@ -594,6 +686,34 @@ const styles = StyleSheet.create({
   },
   boardDisabled: {
     opacity: 0.3,
+  },
+  noComboBanner: {
+    marginHorizontal: 20,
+    marginBottom: 6,
+    backgroundColor: '#FFF3CD',
+    borderRadius: 12,
+    paddingVertical: 10,
+    paddingHorizontal: 16,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    borderWidth: 1,
+    borderColor: '#FFCA28',
+  },
+  noComboText: {
+    fontSize: 13,
+    color: '#8B6914',
+    fontWeight: 'bold',
+  },
+  noComboBtn: {
+    fontSize: 13,
+    color: '#FFF',
+    backgroundColor: '#FF6B6B',
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 20,
+    fontWeight: 'bold',
+    overflow: 'hidden',
   },
   gameOverOverlay: {
     position: 'absolute',
@@ -639,6 +759,14 @@ const styles = StyleSheet.create({
   gridWrapper: {
     position: 'relative',
   },
+  assistOverlay: {
+    position: 'absolute',
+    backgroundColor: 'rgba(255, 220, 0, 0.25)',
+    borderWidth: 2,
+    borderColor: '#FFD700',
+    borderRadius: 8,
+    zIndex: 50,
+  },
   dragOverlay: {
     position: 'absolute',
     backgroundColor: 'rgba(255, 68, 68, 0.3)',
@@ -646,6 +774,11 @@ const styles = StyleSheet.create({
     borderColor: '#FF4444',
     zIndex: 100,
     pointerEvents: 'none',
+  },
+  statBoxAssist: {
+    borderWidth: 2,
+    borderColor: '#FFD700',
+    backgroundColor: 'rgba(255, 220, 0, 0.15)',
   },
   row: {
     flexDirection: 'row',
