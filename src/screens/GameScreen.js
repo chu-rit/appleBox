@@ -19,36 +19,57 @@ const GRID_SIZE = 7;
 const CELL_SIZE = Math.floor((width - 40) / GRID_SIZE);
 const APPLE_EMOJI = '🍎';
 
-// Generate weighted random value (1-9) based on probabilities
-const generateWeightedValue = (lowProb, highProb) => {
-  const random = Math.random() * 100;
-  // lowProb = 1-5 probability, highProb = 6-9 probability
-  if (random < lowProb) {
-    // 1-5 range
-    return Math.floor(Math.random() * 5) + 1;
-  } else {
-    // 6-9 range
-    return Math.floor(Math.random() * 4) + 6;
+/**
+ * @param {number} step - 현재 게임의 목표 숫자 (STEP)
+ * @returns {number} 생성된 사과의 숫자 (1~10, 20)
+ */
+function getNextAppleNumber(step) {
+  const rand = Math.random() * 100; // 0~100 사이의 난수 발생
+
+  // 1단계: STEP 7 ~ 20 (워밍업 구간)
+  if (step <= 20) {
+    // 1~5가 80%, 나머지는 20% (6~9)
+    if (rand < 80) {
+      return Math.floor(Math.random() * 5) + 1; // 1, 2, 3, 4, 5
+    } else {
+      return Math.floor(Math.random() * 4) + 6; // 6, 7, 8, 9
+    }
   }
-};
 
-// Calculate probabilities based on score
-const getProbabilities = (currentScore) => {
-  // Start: 1-5 = 80%, 6-9 = 20%
-  // Every 100 points: 1-5 -5%, 6-9 +5%
-  // Max: 50-50
-  const level = Math.floor(currentScore / 100);
-  const lowProb = Math.max(50, 80 - level * 5); // 80, 75, 70, ... 50
-  const highProb = Math.min(50, 20 + level * 5); // 20, 25, 30, ... 50
-  return { lowProb, highProb };
-};
+  // 2단계: STEP 21 ~ 30 (전환기 - 숫자 10 등장)
+  else if (step <= 30) {
+    // 모든 숫자(1~10) 균등하게 등장 (각 10%)
+    return Math.floor(Math.random() * 10) + 1;
+  }
 
-// Generate random board (1-9) with weighted probabilities
-const generateBoard = (score = 0) => {
-  const { lowProb, highProb } = getProbabilities(score);
+  // 3단계: STEP 31 ~ 39 (본격 추격전 - 높은 숫자 위주)
+  else if (step <= 39) {
+    // 7~10이 70%, 나머지는 30%
+    if (rand < 70) {
+      return Math.floor(Math.random() * 4) + 7; // 7, 8, 9, 10
+    } else {
+      return Math.floor(Math.random() * 6) + 1; // 1, 2, 3, 4, 5, 6
+    }
+  }
+
+  // 4단계: STEP 40 이상 (최종 보스 구간 - 숫자 20 등장)
+  else {
+    // 숫자 20 (5% 잭팟), 7~10 (65%), 1~6 (30%)
+    if (rand < 5) {
+      return 20; // 희귀한 20번 사과!
+    } else if (rand < 70) {
+      return Math.floor(Math.random() * 4) + 7; // 7, 8, 9, 10
+    } else {
+      return Math.floor(Math.random() * 6) + 1; // 1, 2, 3, 4, 5, 6
+    }
+  }
+}
+
+// Generate random board based on current step
+const generateBoard = (step = START_STEP) => {
   return Array(GRID_SIZE).fill(null).map(() =>
     Array(GRID_SIZE).fill(null).map(() => ({
-      value: generateWeightedValue(lowProb, highProb),
+      value: getNextAppleNumber(step),
       removed: false,
     }))
   );
@@ -279,9 +300,8 @@ export default function GameScreen({ onBackToStart }) {
             }
             writeRow--;
           }
-          const { lowProb, highProb } = getProbabilities(newStep);
           for (let r = 0; r <= writeRow; r++) {
-            newBoard[r][c] = { value: generateWeightedValue(lowProb, highProb), removed: false };
+            newBoard[r][c] = { value: getNextAppleNumber(newStep), removed: false };
             const dropDist = (writeRow + 1) * (CELL_SIZE + CELL_MARGIN * 2);
             const anims = cellAnims[r][c];
             anims.opacity.value = 1;
