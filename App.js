@@ -1,8 +1,41 @@
 import { StatusBar } from 'expo-status-bar';
-import { StyleSheet, View } from 'react-native';
+import { StyleSheet, View, Platform } from 'react-native';
+import { useEffect } from 'react';
 import Game from './src/Game';
 
 export default function App() {
+  // Inject web CSS to prevent text selection and context menu
+  useEffect(() => {
+    if (Platform.OS === 'web') {
+      const style = document.createElement('style');
+      style.textContent = `
+        * {
+          -webkit-touch-callout: none !important;
+          -webkit-user-select: none !important;
+          -moz-user-select: none !important;
+          -ms-user-select: none !important;
+          user-select: none !important;
+          -webkit-tap-highlight-color: transparent !important;
+        }
+      `;
+      document.head.appendChild(style);
+      
+      // Prevent context menu
+      const preventMenu = (e) => {
+        e.preventDefault();
+        return false;
+      };
+      document.addEventListener('contextmenu', preventMenu, true);
+      document.addEventListener('selectstart', preventMenu, true);
+      
+      return () => {
+        document.head.removeChild(style);
+        document.removeEventListener('contextmenu', preventMenu, true);
+        document.removeEventListener('selectstart', preventMenu, true);
+      };
+    }
+  }, []);
+
   return (
     <View style={styles.container}>
       <Game />
