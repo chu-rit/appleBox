@@ -1,5 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { StyleSheet, View } from 'react-native';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import StartScreen from './screens/StartScreen';
 import GameScreen from './screens/GameScreen';
 import SettingsScreen from './screens/SettingsScreen';
@@ -11,6 +12,33 @@ export default function Game() {
   const animationRef = useRef(null);
   const [tick, setTick] = useState(0);
   const [mapSize, setMapSize] = useState(7); // 5~8 configurable
+
+  // Load saved mapSize on mount
+  useEffect(() => {
+    const loadSettings = async () => {
+      try {
+        const savedMapSize = await AsyncStorage.getItem('mapSize');
+        if (savedMapSize !== null) {
+          setMapSize(parseInt(savedMapSize, 10));
+        }
+      } catch (e) {
+        console.error('Failed to load settings:', e);
+      }
+    };
+    loadSettings();
+  }, []);
+
+  // Save mapSize when changed
+  useEffect(() => {
+    const saveSettings = async () => {
+      try {
+        await AsyncStorage.setItem('mapSize', mapSize.toString());
+      } catch (e) {
+        console.error('Failed to save settings:', e);
+      }
+    };
+    saveSettings();
+  }, [mapSize]);
 
   // TODO: Add your game state refs here
 

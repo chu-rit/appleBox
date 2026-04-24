@@ -545,6 +545,10 @@ function Cell({ cell, anims, isSelected, cellSize }) {
     ],
   }));
 
+  // Dynamic font sizes based on cell size
+  const appleFontSize = Math.floor(cellSize * 0.55);
+  const numberFontSize = Math.floor(cellSize * 0.32);
+
   return (
     <Animated.View
       style={[
@@ -556,8 +560,8 @@ function Cell({ cell, anims, isSelected, cellSize }) {
     >
       {cell.value > 0 && (
         <>
-          <Text style={styles.apple}>{APPLE_EMOJI}</Text>
-          <Text style={styles.number}>{cell.value}</Text>
+          <Text style={[styles.apple, { fontSize: appleFontSize }]}>{APPLE_EMOJI}</Text>
+          <Text style={[styles.number, { fontSize: numberFontSize }]}>{cell.value}</Text>
         </>
       )}
     </Animated.View>
