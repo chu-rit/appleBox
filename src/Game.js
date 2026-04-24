@@ -2,12 +2,15 @@ import React, { useState, useRef, useEffect } from 'react';
 import { StyleSheet, View } from 'react-native';
 import StartScreen from './screens/StartScreen';
 import GameScreen from './screens/GameScreen';
+import SettingsScreen from './screens/SettingsScreen';
+import RankingScreen from './screens/RankingScreen';
 
 export default function Game() {
   const [screen, setScreen] = useState('start'); // 'start', 'game', 'ranking', 'settings'
   const [running, setRunning] = useState(false);
   const animationRef = useRef(null);
   const [tick, setTick] = useState(0);
+  const [mapSize, setMapSize] = useState(7); // 5~8 configurable
 
   // TODO: Add your game state refs here
 
@@ -63,19 +66,19 @@ export default function Game() {
         );
       case 'game':
         return (
-          <GameScreen onBackToStart={backToStart} />
+          <GameScreen onBackToStart={backToStart} mapSize={mapSize} />
         );
       case 'ranking':
         return (
-          <View style={styles.gameContainer}>
-            {/* TODO: Ranking screen */}
-          </View>
+          <RankingScreen onBack={backToStart} />
         );
       case 'settings':
         return (
-          <View style={styles.gameContainer}>
-            {/* TODO: Settings screen */}
-          </View>
+          <SettingsScreen
+            onBack={backToStart}
+            mapSize={mapSize}
+            onChangeMapSize={setMapSize}
+          />
         );
       default:
         return null;

@@ -15,9 +15,8 @@ import Animated, {
 } from 'react-native-reanimated';
 
 const { width } = Dimensions.get('window');
-const GRID_SIZE = 7;
-const CELL_SIZE = Math.floor((width - 40) / GRID_SIZE);
 const APPLE_EMOJI = '🍎';
+const DEFAULT_GRID_SIZE = 7;
 
 /**
  * @param {number} step - 현재 게임의 목표 숫자 (STEP)
@@ -65,10 +64,10 @@ function getNextAppleNumber(step) {
   }
 }
 
-// Generate random board based on current step
-const generateBoard = (step = START_STEP) => {
-  return Array(GRID_SIZE).fill(null).map(() =>
-    Array(GRID_SIZE).fill(null).map(() => ({
+// Generate random board based on current step and grid size
+const generateBoard = (step = START_STEP, gridSize = DEFAULT_GRID_SIZE) => {
+  return Array(gridSize).fill(null).map(() =>
+    Array(gridSize).fill(null).map(() => ({
       value: getNextAppleNumber(step),
       removed: false,
     }))
@@ -81,9 +80,12 @@ const MAX_TIME = 20;
 const START_TIME = 15;
 const START_STEP = 7;
 
-export default function GameScreen({ onBackToStart }) {
+export default function GameScreen({ onBackToStart, mapSize = DEFAULT_GRID_SIZE }) {
+  const GRID_SIZE = mapSize;
+  const CELL_SIZE = Math.floor((width - 40) / GRID_SIZE);
+  
   const [step, setStep] = useState(START_STEP);
-  const [board, setBoard] = useState(() => generateBoard(0));
+  const [board, setBoard] = useState(() => generateBoard(0, GRID_SIZE));
   const [selection, setSelection] = useState(null);
   const [dragRect, setDragRect] = useState(null);
   const [isDragging, setIsDragging] = useState(false);
@@ -93,7 +95,7 @@ export default function GameScreen({ onBackToStart }) {
   const selectionRef = useRef(null);
   const timerRef = useRef(null);
   
-  // Reanimated shared values for cell animations (7x7 grid)
+  // Reanimated shared values for cell animations (dynamic grid)
   const cellAnims = useRef(
     Array(GRID_SIZE).fill(null).map(() =>
       Array(GRID_SIZE).fill(null).map(() => ({
@@ -103,6 +105,12 @@ export default function GameScreen({ onBackToStart }) {
       }))
     )
   ).current;
+  
+  // Reset board when mapSize changes
+  useEffect(() => {
+    const newBoard = generateBoard(step, GRID_SIZE);
+    setBoard(newBoard);
+  }, [mapSize]);
   
   // Score pop animation
   const scoreScale = useSharedValue(1);
@@ -227,7 +235,7 @@ export default function GameScreen({ onBackToStart }) {
   
   // Reset board with new apples
   const resetBoard = useCallback(() => {
-    const newBoard = generateBoard(step);
+    const newBoard = generateBoard(step, GRID_SIZE);
     setBoard(newBoard);
     for (let r = 0; r < GRID_SIZE; r++) {
       for (let c = 0; c < GRID_SIZE; c++) {
@@ -235,7 +243,7 @@ export default function GameScreen({ onBackToStart }) {
         cellAnims[r][c].scale.value = withSpring(1, { damping: 15 });
       }
     }
-  }, [step, cellAnims]);
+  }, [step, cellAnims, GRID_SIZE]);
   
   // Calculate time bonus based on apple count
   const calculateTimeBonus = (count) => {
