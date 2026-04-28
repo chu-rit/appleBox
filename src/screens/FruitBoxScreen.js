@@ -459,9 +459,9 @@ export default function FruitBoxScreen({ onBackToStart, mapSize = DEFAULT_GRID_S
   return (
     <View style={styles.container}>
       <View style={styles.header}>
-        <Text style={styles.backText} onPress={onBackToStart}>←</Text>
+        <TouchableOpacity style={styles.backBtn} onPress={onBackToStart}><Text style={styles.backIcon}>◀</Text></TouchableOpacity>
         <Text style={styles.title}>FRUIT BOX</Text>
-        <Text style={styles.resetText} onPress={resetBoard}>↻</Text>
+        <TouchableOpacity style={styles.resetBtn} onPress={resetBoard}><Text style={styles.resetIcon}>⟲</Text></TouchableOpacity>
       </View>
 
       {/* Score Box - tap 3 times to toggle assist */}
@@ -677,9 +677,11 @@ function Cell({ cell, anims, isSelected, cellSize }) {
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#FFF8E7', paddingTop: 40 },
   header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 20, marginBottom: 10 },
-  backText: { width: 40, height: 40, backgroundColor: '#FF4444', borderRadius: 20, textAlign: 'center', lineHeight: 40, color: '#FFF', fontSize: 20, fontWeight: 'bold' },
+  backBtn: { width: 44, height: 44, backgroundColor: '#FF8C42', borderRadius: 22, justifyContent: 'center', alignItems: 'center', shadowColor: '#E67E22', shadowOffset: { width: 0, height: 3 }, shadowOpacity: 0.4, shadowRadius: 6, elevation: 6, borderWidth: 2, borderColor: '#FFD700' },
+  backIcon: { color: '#FFF', fontSize: 20, fontWeight: 'bold', includeFontPadding: false, textAlign: 'center', textAlignVertical: 'center', marginTop: -2 },
   title: { fontSize: 24, fontWeight: '900', color: '#FF8C42', letterSpacing: 2 },
-  resetText: { width: 40, height: 40, backgroundColor: '#8B7355', borderRadius: 20, textAlign: 'center', lineHeight: 40, color: '#FFF', fontSize: 20, fontWeight: 'bold' },
+  resetBtn: { width: 44, height: 44, backgroundColor: '#4CAF50', borderRadius: 22, justifyContent: 'center', alignItems: 'center', shadowColor: '#388E3C', shadowOffset: { width: 0, height: 3 }, shadowOpacity: 0.4, shadowRadius: 6, elevation: 6, borderWidth: 2, borderColor: '#81C784' },
+  resetIcon: { color: '#FFF', fontSize: 22, fontWeight: 'bold', includeFontPadding: false, textAlign: 'center', textAlignVertical: 'center', marginTop: -2 },
   
   // Score Box
   scoreBox: { backgroundColor: '#FFF', paddingHorizontal: 20, paddingVertical: 10, borderRadius: 10, alignItems: 'center', minWidth: 80, alignSelf: 'center', marginBottom: 10, shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.1, shadowRadius: 4, elevation: 3 },
