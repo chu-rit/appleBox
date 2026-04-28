@@ -17,7 +17,7 @@ import Animated, {
 import Svg, { Path } from 'react-native-svg';
 
 const { width } = Dimensions.get('window');
-const DEFAULT_GRID_SIZE = 7;
+const DEFAULT_GRID_SIZE = 6;
 const APPLE_EMOJI = '🍎';
 const FRUIT_EMOJIS = ['🍎', '🍊', '🍇', '🍌', '🍉', '🍓', '🍑', '🍍'];
 
