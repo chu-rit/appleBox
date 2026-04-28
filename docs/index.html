@@ -4,7 +4,7 @@
     <meta charset="utf-8" />
     <meta httpEquiv="X-UA-Compatible" content="IE=edge" />
     <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no" />
-    <title>AppleBox</title>
+    <title>appleBox</title>
     <!-- The `react-native-web` recommended style reset: https://necolas.github.io/react-native-web/docs/setup/#root-element -->
     <style id="expo-reset">
       /* These styles make the body full-height */
@@ -15,31 +15,12 @@
       /* These styles disable body scrolling if you are using <ScrollView> */
       body {
         overflow: hidden;
-        -webkit-touch-callout: none !important;
-        -webkit-user-select: none !important;
-        -khtml-user-select: none !important;
-        -moz-user-select: none !important;
-        -ms-user-select: none !important;
-        user-select: none !important;
-        -webkit-tap-highlight-color: transparent !important;
-        touch-action: manipulation;
       }
       /* These styles make the root element full-height */
       #root {
         display: flex;
         height: 100%;
         flex: 1;
-      }
-      /* Prevent text selection on all elements */
-      *, *::before, *::after {
-        -webkit-touch-callout: none !important;
-        -webkit-user-select: none !important;
-        -khtml-user-select: none !important;
-        -moz-user-select: none !important;
-        -ms-user-select: none !important;
-        user-select: none !important;
-        -webkit-tap-highlight-color: transparent !important;
-        touch-action: manipulation;
       }
     </style>
   </head>
@@ -51,53 +32,6 @@
     </noscript>
     <!-- The root element for your Expo app. -->
     <div id="root"></div>
-    <script>
-      // Prevent context menu and text selection - AGGRESSIVE MODE
-      (function() {
-        var preventAll = function(e) {
-          e.preventDefault();
-          e.stopPropagation();
-          return false;
-        };
-        
-        document.addEventListener('contextmenu', preventAll, true);
-        document.addEventListener('selectstart', preventAll, true);
-        document.addEventListener('dragstart', preventAll, true);
-        document.addEventListener('mousedown', preventAll, true);
-        document.addEventListener('mouseup', function(e) {
-          if (e.button === 2) preventAll(e);
-        }, true);
-        document.addEventListener('copy', preventAll, true);
-        document.addEventListener('cut', preventAll, true);
-        document.addEventListener('paste', preventAll, true);
-        document.addEventListener('keydown', function(e) {
-          if ((e.ctrlKey || e.metaKey) && (e.key === 'c' || e.key === 'a')) {
-            preventAll(e);
-          }
-        }, true);
-        
-        // Mobile long-press prevention
-        var touchTimeout;
-        document.addEventListener('touchstart', function(e) {
-          touchTimeout = setTimeout(function() {
-            preventAll(e);
-          }, 400);
-        }, { passive: true });
-        document.addEventListener('touchend', function() {
-          clearTimeout(touchTimeout);
-        }, { passive: true });
-        document.addEventListener('touchmove', function() {
-          clearTimeout(touchTimeout);
-        }, { passive: true });
-        
-        // Disable selection on all elements periodically
-        setInterval(function() {
-          if (window.getSelection) {
-            window.getSelection().removeAllRanges();
-          }
-        }, 100);
-      })();
-    </script>
-  <script src="/appleBox/_expo/static/js/web/AppEntry-13fcdc29a570018e5d6b685f54f122e7.js" defer></script>
+  <script src="/_expo/static/js/web/AppEntry-98d5c64daeead7d013e3995a9a7cac39.js" defer></script>
 </body>
 </html>

@@ -9,50 +9,52 @@ import {
 
 const { width, height } = Dimensions.get('window');
 
-export default function StartScreen({ onStart, onSettings, onRanking }) {
+export default function StartScreen({ onStart, onSettings, onRanking, onLogoPress, gameMode = 'apple' }) {
+  const isFruitMode = gameMode === 'fruit';
+  
   return (
-    <View style={styles.container}>
+    <View style={[styles.container, isFruitMode && styles.containerFruit]}>
       {/* Background Pattern */}
       <View style={styles.background}>
-        {/* Decorative apples */}
+        {/* Decorative fruits */}
         <View style={[styles.apple, styles.apple1]}>
-          <View style={styles.appleBody} />
+          <View style={[styles.appleBody, isFruitMode && styles.fruitBody1]} />
           <View style={styles.appleLeaf} />
         </View>
         <View style={[styles.apple, styles.apple2]}>
-          <View style={styles.appleBody} />
+          <View style={[styles.appleBody, isFruitMode && styles.fruitBody2]} />
           <View style={styles.appleLeaf} />
         </View>
         <View style={[styles.apple, styles.apple3]}>
-          <View style={styles.appleBody} />
+          <View style={[styles.appleBody, isFruitMode && styles.fruitBody3]} />
           <View style={styles.appleLeaf} />
         </View>
       </View>
 
       {/* Title Section */}
       <View style={styles.titleContainer}>
-        <View style={styles.iconBox}>
+        <TouchableOpacity style={[styles.iconBox, isFruitMode && styles.iconBoxFruit]} onPress={onLogoPress} activeOpacity={0.7}>
           <View style={styles.iconApple}>
-            <View style={styles.iconBody} />
+            <View style={[styles.iconBody, isFruitMode && styles.iconBodyFruit]} />
             <View style={styles.iconLeaf} />
           </View>
-        </View>
-        <Text style={styles.title}>APPLE BOX</Text>
-        <Text style={styles.subtitle}>Collect & Stack</Text>
+        </TouchableOpacity>
+        <Text style={[styles.title, isFruitMode && styles.titleFruit]}>{isFruitMode ? 'FRUIT BOX' : 'APPLE BOX'}</Text>
+        <Text style={styles.subtitle}>{isFruitMode ? 'Mix & Match' : 'Collect & Stack'}</Text>
       </View>
 
       {/* Menu Buttons */}
       <View style={styles.menuContainer}>
-        <TouchableOpacity style={styles.button} onPress={onStart}>
-          <Text style={styles.buttonText}>START GAME</Text>
+        <TouchableOpacity style={[styles.button, isFruitMode && styles.buttonFruit]} onPress={onStart}>
+          <Text style={[styles.buttonText, isFruitMode && styles.buttonTextFruit]}>START GAME</Text>
         </TouchableOpacity>
 
-        <TouchableOpacity style={styles.buttonSecondary} onPress={onRanking}>
-          <Text style={styles.buttonSecondaryText}>RANKING</Text>
+        <TouchableOpacity style={[styles.buttonSecondary, isFruitMode && styles.buttonSecondaryFruit]} onPress={onRanking}>
+          <Text style={[styles.buttonSecondaryText, isFruitMode && styles.buttonSecondaryTextFruit]}>RANKING</Text>
         </TouchableOpacity>
 
-        <TouchableOpacity style={styles.buttonSecondary} onPress={onSettings}>
-          <Text style={styles.buttonSecondaryText}>SETTINGS</Text>
+        <TouchableOpacity style={[styles.buttonSecondary, isFruitMode && styles.buttonSecondaryFruit]} onPress={onSettings}>
+          <Text style={[styles.buttonSecondaryText, isFruitMode && styles.buttonSecondaryTextFruit]}>SETTINGS</Text>
         </TouchableOpacity>
       </View>
 
@@ -68,6 +70,9 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: '#FFF8E7', // Cream background
+  },
+  containerFruit: {
+    backgroundColor: '#FFF5E6', // Orange-tinted cream
   },
   background: {
     position: 'absolute',
@@ -104,6 +109,15 @@ const styles = StyleSheet.create({
     backgroundColor: '#FF6B6B',
     borderRadius: 25,
   },
+  fruitBody1: {
+    backgroundColor: '#FFB347', // Orange
+  },
+  fruitBody2: {
+    backgroundColor: '#9ED2C6', // Green
+  },
+  fruitBody3: {
+    backgroundColor: '#DDA0DD', // Plum
+  },
   appleLeaf: {
     position: 'absolute',
     top: -8,
@@ -135,6 +149,10 @@ const styles = StyleSheet.create({
     shadowRadius: 8,
     elevation: 5,
   },
+  iconBoxFruit: {
+    shadowColor: '#FF8C42',
+    shadowOpacity: 0.2,
+  },
   iconApple: {
     width: 70,
     height: 80,
@@ -145,6 +163,9 @@ const styles = StyleSheet.create({
     backgroundColor: '#FF4444',
     borderRadius: 30,
     alignSelf: 'center',
+  },
+  iconBodyFruit: {
+    backgroundColor: '#FF8C42', // Orange for fruit mode
   },
   iconLeaf: {
     position: 'absolute',
@@ -162,6 +183,9 @@ const styles = StyleSheet.create({
     color: '#FF4444',
     letterSpacing: 4,
     marginBottom: 8,
+  },
+  titleFruit: {
+    color: '#FF8C42', // Orange for fruit mode
   },
   subtitle: {
     fontSize: 16,
@@ -185,11 +209,18 @@ const styles = StyleSheet.create({
     shadowRadius: 8,
     elevation: 5,
   },
+  buttonFruit: {
+    backgroundColor: '#FF8C42',
+    shadowColor: '#FF8C42',
+  },
   buttonText: {
     color: '#FFF',
     fontSize: 18,
     fontWeight: '700',
     letterSpacing: 1,
+  },
+  buttonTextFruit: {
+    color: '#FFF',
   },
   buttonSecondary: {
     backgroundColor: '#FFF',
@@ -199,11 +230,17 @@ const styles = StyleSheet.create({
     borderWidth: 2,
     borderColor: '#FF4444',
   },
+  buttonSecondaryFruit: {
+    borderColor: '#FF8C42',
+  },
   buttonSecondaryText: {
     color: '#FF4444',
     fontSize: 16,
     fontWeight: '600',
     letterSpacing: 1,
+  },
+  buttonSecondaryTextFruit: {
+    color: '#FF8C42',
   },
   // Footer
   footer: {

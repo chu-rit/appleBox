@@ -5,6 +5,7 @@ import StartScreen from './screens/StartScreen';
 import GameScreen from './screens/GameScreen';
 import SettingsScreen from './screens/SettingsScreen';
 import RankingScreen from './screens/RankingScreen';
+import FruitBoxScreen from './screens/FruitBoxScreen';
 
 export default function Game() {
   const [screen, setScreen] = useState('start'); // 'start', 'game', 'ranking', 'settings'
@@ -12,6 +13,7 @@ export default function Game() {
   const animationRef = useRef(null);
   const [tick, setTick] = useState(0);
   const [mapSize, setMapSize] = useState(7); // 5~8 configurable
+  const [gameMode, setGameMode] = useState('fruit'); // 'apple' or 'fruit'
 
   // Load saved mapSize on mount
   useEffect(() => {
@@ -43,7 +45,7 @@ export default function Game() {
   // TODO: Add your game state refs here
 
   const startGame = () => {
-    setScreen('game');
+    setScreen(gameMode === 'fruit' ? 'fruitbox' : 'game');
     reset();
     setRunning(true);
   };
@@ -54,6 +56,10 @@ export default function Game() {
 
   const goToSettings = () => {
     setScreen('settings');
+  };
+
+  const toggleGameMode = () => {
+    setGameMode(prev => prev === 'apple' ? 'fruit' : 'apple');
   };
 
   const backToStart = () => {
@@ -90,7 +96,13 @@ export default function Game() {
             onStart={startGame}
             onRanking={goToRanking}
             onSettings={goToSettings}
+            onLogoPress={toggleGameMode}
+            gameMode={gameMode}
           />
+        );
+      case 'fruitbox':
+        return (
+          <FruitBoxScreen onBackToStart={backToStart} mapSize={mapSize} />
         );
       case 'game':
         return (
