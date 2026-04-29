@@ -77,8 +77,8 @@ const generateBoard = (score = 0, gridSize = DEFAULT_GRID_SIZE, customerRequest 
 };
 
 const CELL_MARGIN = 2;
-const MAX_TIME = 15;
 const START_TIME = 15;
+const getMaxTime = (level) => level >= 5 ? 25 : level >= 3 ? 20 : 15;
 // Customer request ranges based on score level
 const getCustomerRequestRange = (score) => {
   const max = 9 + Math.floor(score / 100);
@@ -134,6 +134,10 @@ export default function FruitBoxScreen({ onBackToStart, mapSize = DEFAULT_GRID_S
   const [showScoreBonus, setShowScoreBonus] = useState(null); // { amount: number }
   const [showLevelUp, setShowLevelUp] = useState(false);
   const prevLevelRef = useRef(1);
+  const [chance, setChance] = useState(1);
+  const [hintCells, setHintCells] = useState(null); // { r1, c1, r2, c2 }
+  const chanceUsedRef = useRef(false);
+  const combosRef = useRef([]);
   const timeLeftRef = useRef(timeLeft);
   timeLeftRef.current = timeLeft;
   const dragStartPos = useRef({ x: 0, y: 0 });
@@ -148,6 +152,7 @@ export default function FruitBoxScreen({ onBackToStart, mapSize = DEFAULT_GRID_S
         opacity: useSharedValue(1),
         scale: useSharedValue(1),
         translateY: useSharedValue(0),
+        rotateY: useSharedValue(0),
       }))
     )
   ).current;
@@ -158,6 +163,12 @@ export default function FruitBoxScreen({ onBackToStart, mapSize = DEFAULT_GRID_S
   const timerBarFlash = useSharedValue(0);
   const levelUpScale = useSharedValue(0);
   const levelUpOpacity = useSharedValue(0);
+  const customerSlideX = useSharedValue(200);
+  const customerSlideOpacity = useSharedValue(0);
+  const customerSlideStyle = useAnimatedStyle(() => ({
+    transform: [{ translateX: customerSlideX.value }],
+    opacity: customerSlideOpacity.value,
+  }));
   const levelUpAnimStyle = useAnimatedStyle(() => ({
     transform: [{ scale: levelUpScale.value }],
     opacity: levelUpOpacity.value,
@@ -172,18 +183,31 @@ export default function FruitBoxScreen({ onBackToStart, mapSize = DEFAULT_GRID_S
           setGameOver(true);
           return 0;
         }
-        return Math.max(0, prev - 0.1);
+        const next = Math.max(0, prev - 0.1);
+        if (next <= 5.05 && !chanceUsedRef.current) {
+          chanceUsedRef.current = true;
+          setChance(c => {
+            if (c > 0) {
+              // trigger hint via separate effect
+              setHintCells('TRIGGER');
+              return 0;
+            }
+            return c;
+          });
+        }
+        return next;
       });
     }, 100);
     return () => clearInterval(timerRef.current);
   }, [gameOver]);
   
   const addTime = useCallback((bonusSeconds) => {
+    const maxTime = getMaxTime(getLevel(score));
     const newTime = timeLeftRef.current + bonusSeconds;
-    const overflowScore = newTime > MAX_TIME ? Math.floor((newTime - MAX_TIME) * 10) : 0;
-    const actualBonus = Math.round(Math.min(bonusSeconds, MAX_TIME - timeLeftRef.current));
+    const overflowScore = newTime > maxTime ? Math.floor((newTime - maxTime) * 10) : 0;
+    const actualBonus = Math.round(Math.min(bonusSeconds, maxTime - timeLeftRef.current));
     
-    setTimeLeft(prev => Math.min(MAX_TIME, prev + bonusSeconds));
+    setTimeLeft(prev => Math.min(maxTime, prev + bonusSeconds));
     
     // Show time bonus text (actual amount added)
     setShowTimeBonus({ amount: actualBonus });
@@ -245,7 +269,25 @@ export default function FruitBoxScreen({ onBackToStart, mapSize = DEFAULT_GRID_S
     }
   }, []);
 
-  const combos = useMemo(() => {
+  // Hint effect: when hintCells === 'TRIGGER', pick first combo and animate
+  useEffect(() => {
+    if (hintCells !== 'TRIGGER') return;
+    if (combosRef.current.length === 0) { setHintCells(null); return; }
+    const combo = combosRef.current[0];
+    setHintCells(combo);
+    // Flip animation: rotateY 0 → 90 → 0
+    for (let r = combo.r1; r <= combo.r2; r++) {
+      for (let c = combo.c1; c <= combo.c2; c++) {
+        const anim = cellAnims[r][c];
+        anim.rotateY.value = withTiming(90, { duration: 250 }, () => {
+          anim.rotateY.value = withTiming(0, { duration: 250 });
+        });
+      }
+    }
+    setTimeout(() => setHintCells(null), 1200);
+  }, [hintCells]);
+
+  const combos = useMemo(() => { // eslint-disable-line
     const result = [];
     for (let r1 = 0; r1 < GRID_SIZE; r1++) {
       for (let c1 = 0; c1 < GRID_SIZE; c1++) {
@@ -266,6 +308,7 @@ export default function FruitBoxScreen({ onBackToStart, mapSize = DEFAULT_GRID_S
     return result;
   }, [board]);
 
+  combosRef.current = combos;
   const possibleCombinations = combos.length;
 
   const assistCombos = useMemo(() => {
@@ -318,7 +361,9 @@ export default function FruitBoxScreen({ onBackToStart, mapSize = DEFAULT_GRID_S
   const removeApples = useCallback((minRow, maxRow, minCol, maxCol) => {
     const count = (maxRow - minRow + 1) * (maxCol - minCol + 1);
     const points = customerRequest + count;
-    const timeBonus = count >= 4 ? 7 : count >= 3 ? 6 : 5;
+    const level = getLevel(score);
+    const levelBonus = level >= 5 ? 4 : level >= 3 ? 2 : 0;
+    const timeBonus = (count >= 4 ? 7 : count >= 3 ? 6 : 5) + levelBonus;
     
     // Play delivery animation first
     playDeliveryAnimation();
@@ -340,12 +385,18 @@ export default function FruitBoxScreen({ onBackToStart, mapSize = DEFAULT_GRID_S
       // Generate new customer request based on new score
       setCustomerRequest(generateCustomerRequest(newScore));
       setCustomerImgSeed(Math.floor(Math.random() * 2));
+      customerSlideX.value = 200;
+      customerSlideOpacity.value = 0;
+      customerSlideX.value = withSpring(0, { damping: 18, stiffness: 120 });
+      customerSlideOpacity.value = withTiming(1, { duration: 200 });
       scoreScale.value = withSpring(1.15, { damping: 12 });
       // Level up check
       const newLevel = getLevel(newScore);
       if (newLevel > prevLevelRef.current) {
         prevLevelRef.current = newLevel;
         setShowLevelUp(true);
+        setChance(1);
+        chanceUsedRef.current = false;
         levelUpScale.value = 0;
         levelUpOpacity.value = 0;
         levelUpScale.value = withSpring(1, { damping: 8, stiffness: 120 });
@@ -496,6 +547,14 @@ export default function FruitBoxScreen({ onBackToStart, mapSize = DEFAULT_GRID_S
     setBoard(newBoard);
   }, [customerRequest, GRID_SIZE]);
 
+  // Initial customer slide-in on mount
+  useEffect(() => {
+    customerSlideX.value = 200;
+    customerSlideOpacity.value = 0;
+    customerSlideX.value = withSpring(0, { damping: 18, stiffness: 120 });
+    customerSlideOpacity.value = withTiming(1, { duration: 200 });
+  }, []);
+
   // Delivery animation styles
   const deliveryAnimatedStyle = useAnimatedStyle(() => ({
     transform: [
@@ -531,7 +590,7 @@ export default function FruitBoxScreen({ onBackToStart, mapSize = DEFAULT_GRID_S
         )}
       </View>
 
-      <TimerBar timeLeft={timeLeft} maxTime={MAX_TIME} flashValue={timerBarFlash} showTimeBonus={showTimeBonus} />
+      <TimerBar timeLeft={timeLeft} maxTime={getMaxTime(getLevel(score))} flashValue={timerBarFlash} showTimeBonus={showTimeBonus} />
 
       {/* Level Up Overlay */}
       {showLevelUp && (
@@ -551,7 +610,7 @@ export default function FruitBoxScreen({ onBackToStart, mapSize = DEFAULT_GRID_S
 
         {/* Customer (Right) */}
         <View style={styles.characterWrapper}>
-          <View style={styles.characterEmojiWrapper}>
+          <Animated.View style={[styles.characterEmojiWrapper, customerSlideStyle]}>
             <Image source={getCustomerImg(customerRequest, customerImgSeed)} style={customerRequest <= 9 ? styles.customerImageSmall : styles.customerImage} resizeMode="contain" />
             <View style={styles.svgBubbleContainer}>
               {Platform.OS === 'web' ? (
@@ -570,7 +629,7 @@ export default function FruitBoxScreen({ onBackToStart, mapSize = DEFAULT_GRID_S
               )}
               <Text style={styles.svgBubbleText}>{customerRequest}</Text>
             </View>
-          </View>
+          </Animated.View>
         </View>
       </View>
 
@@ -710,6 +769,8 @@ function Cell({ cell, anims, isSelected, cellSize }) {
     transform: [
       { translateY: anims.translateY.value },
       { scale: isSelected ? 0.95 : anims.scale.value },
+      { perspective: 600 },
+      { rotateY: `${anims.rotateY.value}deg` },
     ],
   }));
 

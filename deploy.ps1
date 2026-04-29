@@ -1,4 +1,6 @@
 # Build and deploy to docs folder for GitHub Pages
+[Console]::OutputEncoding = [System.Text.Encoding]::UTF8
+$OutputEncoding = [System.Text.Encoding]::UTF8
 
 Write-Host "Building web..." -ForegroundColor Cyan
 npx expo export --platform web --output-dir docs
