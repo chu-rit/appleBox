@@ -14,4 +14,15 @@ $fixed = $html -replace 'src="/_expo/', 'src="/appleBox/_expo/'
 $fixed = $fixed -replace 'src="_expo/', 'src="/appleBox/_expo/'
 Set-Content "docs\index.html" $fixed -NoNewline
 
+# Fix asset paths in JS bundle (images referenced as /assets/...)
+Write-Host "Fixing asset paths in JS bundle..." -ForegroundColor Cyan
+$jsFile = Get-ChildItem "docs\_expo\static\js\web\AppEntry-*.js" | Select-Object -First 1
+if ($jsFile) {
+    $js = [System.IO.File]::ReadAllText($jsFile.FullName)
+    $js = $js -replace '"/assets/', '"/appleBox/assets/'
+    $js = $js -replace '"assets/', '"/appleBox/assets/'
+    [System.IO.File]::WriteAllText($jsFile.FullName, $js)
+    Write-Host "Fixed: $($jsFile.Name)" -ForegroundColor Yellow
+}
+
 Write-Host "Done! docs/ is ready for GitHub Pages." -ForegroundColor Green
