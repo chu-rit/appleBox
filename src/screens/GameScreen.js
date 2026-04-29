@@ -1,4 +1,5 @@
 import React, { useState, useRef, useCallback, useEffect, useMemo } from 'react';
+import AppleIcon from '../assets/icons/AppleIcon';
 import {
   View,
   Text,
@@ -15,7 +16,6 @@ import Animated, {
 } from 'react-native-reanimated';
 
 const { width } = Dimensions.get('window');
-const APPLE_EMOJI = '🍎';
 const DEFAULT_GRID_SIZE = 7;
 
 /**
@@ -560,7 +560,7 @@ function Cell({ cell, anims, isSelected, cellSize }) {
     >
       {cell.value > 0 && (
         <>
-          <Text style={[styles.apple, { fontSize: appleFontSize }]}>{APPLE_EMOJI}</Text>
+          <AppleIcon size={appleFontSize} />
           <Text style={[styles.number, { fontSize: numberFontSize }]}>{cell.value}</Text>
         </>
       )}
@@ -838,9 +838,6 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.6,
     elevation: 8,
-  },
-  apple: {
-    fontSize: 28,
   },
   number: {
     position: 'absolute',

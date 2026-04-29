@@ -1,4 +1,4 @@
-import React, { useState, useRef, useCallback, useEffect, useMemo } from 'react';
+﻿import React, { useState, useRef, useCallback, useEffect, useMemo } from 'react';
 import {
   View,
   Text,
@@ -6,6 +6,7 @@ import {
   Dimensions,
   Platform,
   TouchableOpacity,
+  Image,
 } from 'react-native';
 import { Gesture, GestureDetector, GestureHandlerRootView } from 'react-native-gesture-handler';
 import Animated, {
@@ -25,10 +26,21 @@ import PeachIcon from '../assets/icons/PeachIcon';
 import PineappleIcon from '../assets/icons/PineappleIcon';
 import FruitBlock from '../assets/icons/FruitBlock';
 
+const workerImg = require('../assets/img/S1.png');
+const customerImgs = {
+  c1: require('../assets/img/C1.png'),
+  c2: require('../assets/img/C2.png'),
+  c3: require('../assets/img/C3.png'),
+};
+
+const getCustomerImg = (request, seed) => {
+  if (request <= 9) return customerImgs.c2;
+  return seed % 2 === 0 ? customerImgs.c1 : customerImgs.c3;
+};
+
 const { width } = Dimensions.get('window');
 const DEFAULT_GRID_SIZE = 6;
-const APPLE_EMOJI = '🍎';
-const FRUIT_EMOJIS = ['🍎', '🍊', '🍇', '�', '🍉', '🍓', '🍑', '🍍'];
+const FRUITS = ['apple', 'orange', 'grape', 'pear', 'watermelon', 'strawberry', 'peach', 'pineapple'];
 
 const getNextNumber = (currentTargetSum) => {
   const roll = Math.random();
@@ -57,7 +69,7 @@ const generateBoard = (score = 0, gridSize = DEFAULT_GRID_SIZE, customerRequest 
   return Array(gridSize).fill(null).map(() =>
     Array(gridSize).fill(null).map(() => ({ 
       value: getNextNumber(customerRequest),
-      fruit: FRUIT_EMOJIS[Math.floor(Math.random() * FRUIT_EMOJIS.length)],
+      fruit: FRUITS[Math.floor(Math.random() * FRUITS.length)],
       removed: false,
     }))
   );
@@ -112,6 +124,7 @@ export default function FruitBoxScreen({ onBackToStart, mapSize = DEFAULT_GRID_S
   const [gameOver, setGameOver] = useState(false);
   const [score, setScore] = useState(0);
   const [customerRequest, setCustomerRequest] = useState(() => generateCustomerRequest(0));
+  const [customerImgSeed, setCustomerImgSeed] = useState(() => Math.floor(Math.random() * 2));
   const [showDelivery, setShowDelivery] = useState(false);
   const [timeLeft, setTimeLeft] = useState(START_TIME);
   const [showTimeBonus, setShowTimeBonus] = useState(null); // { amount: number }
@@ -157,7 +170,7 @@ export default function FruitBoxScreen({ onBackToStart, mapSize = DEFAULT_GRID_S
   const addTime = useCallback((bonusSeconds) => {
     const newTime = timeLeftRef.current + bonusSeconds;
     const overflowScore = newTime > MAX_TIME ? Math.floor((newTime - MAX_TIME) * 10) : 0;
-    const actualBonus = Math.min(bonusSeconds, MAX_TIME - timeLeftRef.current);
+    const actualBonus = Math.round(Math.min(bonusSeconds, MAX_TIME - timeLeftRef.current));
     
     setTimeLeft(prev => Math.min(MAX_TIME, prev + bonusSeconds));
     
@@ -315,6 +328,7 @@ export default function FruitBoxScreen({ onBackToStart, mapSize = DEFAULT_GRID_S
       setShowScoreBonus({ amount: points + scoreBonus });
       // Generate new customer request based on new score
       setCustomerRequest(generateCustomerRequest(newScore));
+      setCustomerImgSeed(Math.floor(Math.random() * 2));
       scoreScale.value = withSpring(1.15, { damping: 12 });
       
       // Hide score bonus after 1 second
@@ -355,7 +369,7 @@ export default function FruitBoxScreen({ onBackToStart, mapSize = DEFAULT_GRID_S
           for (let r = 0; r <= writeRow; r++) {
             newBoard[r][c] = { 
               value: getNextNumber(customerRequest), 
-              fruit: FRUIT_EMOJIS[Math.floor(Math.random() * FRUIT_EMOJIS.length)],
+              fruit: FRUITS[Math.floor(Math.random() * FRUITS.length)],
               removed: false 
             };
             const dropDist = (writeRow + 1) * (CELL_SIZE + CELL_MARGIN * 2);
@@ -492,15 +506,13 @@ export default function FruitBoxScreen({ onBackToStart, mapSize = DEFAULT_GRID_S
       <View style={styles.charactersRow}>
         {/* Worker (Left) */}
         <View style={styles.characterWrapper}>
-          <View style={styles.characterEmojiWrapper}>
-            <Text style={styles.bigCharacter}>👨‍🍳</Text>
-          </View>
+          <Image source={workerImg} style={styles.workerImage} resizeMode="contain" />
         </View>
 
         {/* Customer (Right) */}
         <View style={styles.characterWrapper}>
           <View style={styles.characterEmojiWrapper}>
-            <Text style={styles.bigCharacter}>🧑‍💼</Text>
+            <Image source={getCustomerImg(customerRequest, customerImgSeed)} style={customerRequest <= 9 ? styles.customerImageSmall : styles.customerImage} resizeMode="contain" />
             <View style={styles.svgBubbleContainer}>
               {Platform.OS === 'web' ? (
                 <img
@@ -609,7 +621,7 @@ function TimerBar({ timeLeft, maxTime, flashValue, showTimeBonus }) {
   return (
     <View style={timerStyles.wrapper}>
       {showTimeBonus && (
-        <Text style={timerStyles.bonusText}>+{showTimeBonus.amount}초</Text>
+        <Text style={timerStyles.bonusText}>+{Math.round(showTimeBonus.amount)}초</Text>
       )}
       <Animated.View style={[timerStyles.container, flashStyle]}>
         <View style={timerStyles.track}>
@@ -677,7 +689,7 @@ function Cell({ cell, anims, isSelected, cellSize }) {
         <>
           <FruitBlock 
             size={cellSize} 
-            fruit={cell.fruit || '🍎'} 
+            fruit={cell.fruit || FRUITS[0]} 
             selected={isSelected}
             style={styles.cellBackground}
           />
@@ -685,14 +697,14 @@ function Cell({ cell, anims, isSelected, cellSize }) {
             {(() => {
               const iconSize = appleFontSize * 1.2;
               switch (cell.fruit) {
-                case '🍎': return <AppleIcon size={iconSize} />;
-                case '🍊': return <OrangeIcon size={iconSize} />;
-                case '🍇': return <GrapeIcon size={iconSize} />;
-                case '�': return <PearIcon size={iconSize} />;
-                case '🍉': return <WatermelonIcon size={iconSize} />;
-                case '🍓': return <StrawberryIcon size={iconSize} />;
-                case '🍑': return <PeachIcon size={iconSize} />;
-                case '🍍': return <PineappleIcon size={iconSize} />;
+                case 'apple':       return <AppleIcon size={iconSize} />;
+                case 'orange':      return <OrangeIcon size={iconSize} />;
+                case 'grape':       return <GrapeIcon size={iconSize} />;
+                case 'pear':        return <PearIcon size={iconSize} />;
+                case 'watermelon':  return <WatermelonIcon size={iconSize} />;
+                case 'strawberry':  return <StrawberryIcon size={iconSize} />;
+                case 'peach':       return <PeachIcon size={iconSize} />;
+                case 'pineapple':   return <PineappleIcon size={iconSize} />;
                 default: return <AppleIcon size={iconSize} />;
               }
             })()}
@@ -732,19 +744,31 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: 'flex-end',
   },
+  workerImage: {
+    height: 150,
+    aspectRatio: 677 / 369,
+  },
+  customerImage: {
+    height: 150,
+    aspectRatio: 677 / 369,
+  },
+  customerImageSmall: {
+    height: 100,
+    aspectRatio: 677 / 369,
+  },
   characterEmojiWrapper: {
     position: 'relative',
-    width: 60,
-    height: 60,
+    width: 275,
+    height: 150,
     alignItems: 'center',
-    justifyContent: 'center',
+    justifyContent: 'flex-end',
   },
   bigCharacter: { fontSize: 52 },
   // SVG bubble for mobile (iOS/Android)
   svgBubbleContainer: {
     position: 'absolute',
-    top: -25,
-    right: -45,
+    top: 0,
+    right: 40,
     width: 70,
     height: 50,
     alignItems: 'center',
