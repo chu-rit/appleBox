@@ -15,11 +15,20 @@ import Animated, {
   withSpring,
 } from 'react-native-reanimated';
 import Svg, { Path } from 'react-native-svg';
+import AppleIcon from '../assets/icons/AppleIcon';
+import OrangeIcon from '../assets/icons/OrangeIcon';
+import GrapeIcon from '../assets/icons/GrapeIcon';
+import PearIcon from '../assets/icons/PearIcon';
+import WatermelonIcon from '../assets/icons/WatermelonIcon';
+import StrawberryIcon from '../assets/icons/StrawberryIcon';
+import PeachIcon from '../assets/icons/PeachIcon';
+import PineappleIcon from '../assets/icons/PineappleIcon';
+import FruitBlock from '../assets/icons/FruitBlock';
 
 const { width } = Dimensions.get('window');
 const DEFAULT_GRID_SIZE = 6;
 const APPLE_EMOJI = '🍎';
-const FRUIT_EMOJIS = ['🍎', '🍊', '🍇', '🍌', '🍉', '🍓', '🍑', '🍍'];
+const FRUIT_EMOJIS = ['🍎', '🍊', '🍇', '�', '🍉', '🍓', '🍑', '🍍'];
 
 const getNextNumber = (currentTargetSum) => {
   const roll = Math.random();
@@ -148,11 +157,12 @@ export default function FruitBoxScreen({ onBackToStart, mapSize = DEFAULT_GRID_S
   const addTime = useCallback((bonusSeconds) => {
     const newTime = timeLeftRef.current + bonusSeconds;
     const overflowScore = newTime > MAX_TIME ? Math.floor((newTime - MAX_TIME) * 10) : 0;
+    const actualBonus = Math.min(bonusSeconds, MAX_TIME - timeLeftRef.current);
     
     setTimeLeft(prev => Math.min(MAX_TIME, prev + bonusSeconds));
     
-    // Show time bonus text
-    setShowTimeBonus({ amount: bonusSeconds });
+    // Show time bonus text (actual amount added)
+    setShowTimeBonus({ amount: actualBonus });
     timerBarFlash.value = withTiming(1, { duration: 100 });
     
     clearTimeout(timeBonusTimeoutRef.current);
@@ -445,7 +455,6 @@ export default function FruitBoxScreen({ onBackToStart, mapSize = DEFAULT_GRID_S
   useEffect(() => {
     const newBoard = generateBoard(0, GRID_SIZE, customerRequest);
     setBoard(newBoard);
-    setTimeLeft(START_TIME);
   }, [customerRequest, GRID_SIZE]);
 
   // Delivery animation styles
@@ -663,11 +672,32 @@ function Cell({ cell, anims, isSelected, cellSize }) {
   const numberFontSize = Math.floor(cellSize * 0.32);
 
   return (
-    <Animated.View style={[styles.cell, { width: cellSize, height: cellSize }, animatedStyle, isSelected && styles.cellSelected]}>
+    <Animated.View style={[styles.cellContainer, { width: cellSize, height: cellSize }, animatedStyle]}>
       {cell.value > 0 && (
         <>
-          <Text style={[styles.apple, { fontSize: appleFontSize }]}>{cell.fruit || APPLE_EMOJI}</Text>
-          <Text style={[styles.number, { fontSize: numberFontSize }]}>{cell.value}</Text>
+          <FruitBlock 
+            size={cellSize} 
+            fruit={cell.fruit || '🍎'} 
+            selected={isSelected}
+            style={styles.cellBackground}
+          />
+          <View style={styles.cellContent}>
+            {(() => {
+              const iconSize = appleFontSize * 1.2;
+              switch (cell.fruit) {
+                case '🍎': return <AppleIcon size={iconSize} />;
+                case '🍊': return <OrangeIcon size={iconSize} />;
+                case '🍇': return <GrapeIcon size={iconSize} />;
+                case '�': return <PearIcon size={iconSize} />;
+                case '🍉': return <WatermelonIcon size={iconSize} />;
+                case '🍓': return <StrawberryIcon size={iconSize} />;
+                case '🍑': return <PeachIcon size={iconSize} />;
+                case '🍍': return <PineappleIcon size={iconSize} />;
+                default: return <AppleIcon size={iconSize} />;
+              }
+            })()}
+            <Text style={[styles.number, { fontSize: numberFontSize }]}>{cell.value}</Text>
+          </View>
         </>
       )}
     </Animated.View>
@@ -786,8 +816,10 @@ const styles = StyleSheet.create({
   assistOverlay: { position: 'absolute', backgroundColor: 'rgba(255, 140, 66, 0.25)', borderWidth: 2, borderColor: '#FF8C42', borderRadius: 8, zIndex: 50 },
   dragOverlay: { position: 'absolute', backgroundColor: 'rgba(255, 140, 66, 0.3)', borderWidth: 2, borderColor: '#FF8C42', zIndex: 100, pointerEvents: 'none' },
   row: { flexDirection: 'row' },
-  cell: { justifyContent: 'center', alignItems: 'center', backgroundColor: '#FFB347', margin: CELL_MARGIN, borderRadius: 12, borderWidth: 2, borderColor: '#FF8C42', shadowColor: '#E67E22', shadowOffset: { width: 0, height: 3 }, shadowOpacity: 0.4, shadowRadius: 4, elevation: 5 },
-  cellSelected: { backgroundColor: '#FFD93D', borderColor: '#F39C12', shadowColor: '#D68910', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.6, elevation: 8 },
+  cellContainer: { justifyContent: 'center', alignItems: 'center', margin: CELL_MARGIN },
+  cellBackground: { position: 'absolute', top: 0, left: 0 },
+  cellContent: { justifyContent: 'center', alignItems: 'center', zIndex: 10 },
+  cellSelected: { transform: [{ scale: 0.98 }] },
   apple: { fontSize: 28 },
   number: { 
     position: 'absolute', 
