@@ -15,7 +15,7 @@ import Animated, {
   withTiming,
   withSpring,
 } from 'react-native-reanimated';
-import Svg, { Path } from 'react-native-svg';
+import Svg, { Path, Circle } from 'react-native-svg';
 import AppleIcon from '../assets/icons/AppleIcon';
 import OrangeIcon from '../assets/icons/OrangeIcon';
 import GrapeIcon from '../assets/icons/GrapeIcon';
@@ -27,6 +27,7 @@ import PineappleIcon from '../assets/icons/PineappleIcon';
 import FruitBlock from '../assets/icons/FruitBlock';
 
 const workerImg = require('../assets/img/S1.png');
+const workerImgDelivery = require('../assets/img/S2.png');
 const customerImgs = {
   c1: require('../assets/img/C1.png'),
   c2: require('../assets/img/C2.png'),
@@ -84,6 +85,8 @@ const getCustomerRequestRange = (score) => {
   return { min: 5, max };
 };
 
+const getLevel = (score) => Math.floor(score / 100) + 1;
+
 const generateCustomerRequest = (score) => {
   const { min, max } = getCustomerRequestRange(score);
   const range = max - min + 1;
@@ -129,6 +132,8 @@ export default function FruitBoxScreen({ onBackToStart, mapSize = DEFAULT_GRID_S
   const [timeLeft, setTimeLeft] = useState(START_TIME);
   const [showTimeBonus, setShowTimeBonus] = useState(null); // { amount: number }
   const [showScoreBonus, setShowScoreBonus] = useState(null); // { amount: number }
+  const [showLevelUp, setShowLevelUp] = useState(false);
+  const prevLevelRef = useRef(1);
   const timeLeftRef = useRef(timeLeft);
   timeLeftRef.current = timeLeft;
   const dragStartPos = useRef({ x: 0, y: 0 });
@@ -151,6 +156,12 @@ export default function FruitBoxScreen({ onBackToStart, mapSize = DEFAULT_GRID_S
   const deliveryScale = useSharedValue(0);
   const deliveryY = useSharedValue(0);
   const timerBarFlash = useSharedValue(0);
+  const levelUpScale = useSharedValue(0);
+  const levelUpOpacity = useSharedValue(0);
+  const levelUpAnimStyle = useAnimatedStyle(() => ({
+    transform: [{ scale: levelUpScale.value }],
+    opacity: levelUpOpacity.value,
+  }));
   
   // Timer
   useEffect(() => {
@@ -330,6 +341,20 @@ export default function FruitBoxScreen({ onBackToStart, mapSize = DEFAULT_GRID_S
       setCustomerRequest(generateCustomerRequest(newScore));
       setCustomerImgSeed(Math.floor(Math.random() * 2));
       scoreScale.value = withSpring(1.15, { damping: 12 });
+      // Level up check
+      const newLevel = getLevel(newScore);
+      if (newLevel > prevLevelRef.current) {
+        prevLevelRef.current = newLevel;
+        setShowLevelUp(true);
+        levelUpScale.value = 0;
+        levelUpOpacity.value = 0;
+        levelUpScale.value = withSpring(1, { damping: 8, stiffness: 120 });
+        levelUpOpacity.value = withTiming(1, { duration: 200 });
+        setTimeout(() => {
+          levelUpOpacity.value = withTiming(0, { duration: 300 });
+          setTimeout(() => setShowLevelUp(false), 300);
+        }, 800);
+      }
       
       // Hide score bonus after 1 second
       setTimeout(() => {
@@ -487,14 +512,20 @@ export default function FruitBoxScreen({ onBackToStart, mapSize = DEFAULT_GRID_S
         <TouchableOpacity style={styles.resetBtn} onPress={resetBoard}><Text style={styles.resetIcon}>⟲</Text></TouchableOpacity>
       </View>
 
-      {/* Score Box - tap 3 times to toggle assist */}
+      {/* Score + Level Row */}
       <View style={{ alignItems: 'center' }}>
-        <TouchableOpacity style={styles.scoreBox} onPress={handlePossibleTap}>
-          <Text style={styles.scoreLabel}>SCORE</Text>
-          <Animated.Text style={[styles.scoreValue, useAnimatedStyle(() => ({ transform: [{ scale: scoreScale.value }] }))]}>
-            {score}
-          </Animated.Text>
-        </TouchableOpacity>
+        <View style={styles.scoreRow}>
+          <TouchableOpacity style={styles.scoreBox} onPress={handlePossibleTap}>
+            <Text style={styles.scoreLabel}>SCORE</Text>
+            <Animated.Text style={[styles.scoreValue, useAnimatedStyle(() => ({ transform: [{ scale: scoreScale.value }] }))]}>
+              {score}
+            </Animated.Text>
+          </TouchableOpacity>
+          <View style={styles.levelBox}>
+            <Text style={styles.levelLabel}>LEVEL</Text>
+            <Text style={styles.levelValue}>{getLevel(score)}</Text>
+          </View>
+        </View>
         {showScoreBonus && (
           <Text style={styles.scoreBonusText}>+{showScoreBonus.amount}점</Text>
         )}
@@ -502,11 +533,20 @@ export default function FruitBoxScreen({ onBackToStart, mapSize = DEFAULT_GRID_S
 
       <TimerBar timeLeft={timeLeft} maxTime={MAX_TIME} flashValue={timerBarFlash} showTimeBonus={showTimeBonus} />
 
+      {/* Level Up Overlay */}
+      {showLevelUp && (
+        <Animated.View style={[styles.levelUpOverlay, levelUpAnimStyle]}>
+          <Text style={styles.levelUpStar}>⭐</Text>
+          <Text style={styles.levelUpText}>LEVEL UP!</Text>
+          <Text style={styles.levelUpNum}>Lv.{getLevel(score)}</Text>
+        </Animated.View>
+      )}
+
       {/* Worker and Customer */}
       <View style={styles.charactersRow}>
         {/* Worker (Left) */}
         <View style={styles.characterWrapper}>
-          <Image source={workerImg} style={styles.workerImage} resizeMode="contain" />
+          <Image source={showDelivery ? workerImgDelivery : workerImg} style={styles.workerImage} resizeMode="contain" />
         </View>
 
         {/* Customer (Right) */}
@@ -534,13 +574,6 @@ export default function FruitBoxScreen({ onBackToStart, mapSize = DEFAULT_GRID_S
         </View>
       </View>
 
-      {/* Delivery Animation */}
-      {showDelivery && (
-        <Animated.View style={[styles.deliveryAnimation, deliveryAnimatedStyle]}>
-          <Text style={styles.deliveryEmoji}>🛍️</Text>
-          <Text style={styles.deliveryText}>배달완료!</Text>
-        </Animated.View>
-      )}
 
       {!gameOver && possibleCombinations === 0 && (
         <View style={styles.noComboBanner}>
@@ -717,7 +750,7 @@ function Cell({ cell, anims, isSelected, cellSize }) {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#FFF8E7', paddingTop: 40 },
+  container: { flex: 1, backgroundColor: '#FFF8E7', paddingTop: 40, overflow: 'hidden' },
   header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 20, marginBottom: 10 },
   backBtn: { width: 44, height: 44, backgroundColor: '#FF8C42', borderRadius: 22, justifyContent: 'center', alignItems: 'center', shadowColor: '#E67E22', shadowOffset: { width: 0, height: 3 }, shadowOpacity: 0.4, shadowRadius: 6, elevation: 6, borderWidth: 2, borderColor: '#FFD700' },
   backIcon: { color: '#FFF', fontSize: 20, fontWeight: 'bold', includeFontPadding: false, textAlign: 'center', textAlignVertical: 'center', marginTop: -2 },
@@ -725,8 +758,18 @@ const styles = StyleSheet.create({
   resetBtn: { width: 44, height: 44, backgroundColor: '#4CAF50', borderRadius: 22, justifyContent: 'center', alignItems: 'center', shadowColor: '#388E3C', shadowOffset: { width: 0, height: 3 }, shadowOpacity: 0.4, shadowRadius: 6, elevation: 6, borderWidth: 2, borderColor: '#81C784' },
   resetIcon: { color: '#FFF', fontSize: 22, fontWeight: 'bold', includeFontPadding: false, textAlign: 'center', textAlignVertical: 'center', marginTop: -2 },
   
+  // Level Up Overlay
+  levelUpOverlay: { position: 'absolute', top: '30%', alignSelf: 'center', zIndex: 200, backgroundColor: '#FFF8E7', borderRadius: 24, paddingHorizontal: 40, paddingVertical: 24, alignItems: 'center', borderWidth: 3, borderColor: '#FFD700', shadowColor: '#FF8C42', shadowOffset: { width: 0, height: 6 }, shadowOpacity: 0.5, shadowRadius: 16, elevation: 20 },
+  levelUpStar: { fontSize: 40, marginBottom: 4 },
+  levelUpText: { fontSize: 32, fontWeight: '900', color: '#FF8C42', letterSpacing: 3 },
+  levelUpNum: { fontSize: 22, fontWeight: '800', color: '#FFD700', marginTop: 4 },
+
   // Score Box
-  scoreBox: { backgroundColor: '#FFF', paddingHorizontal: 20, paddingVertical: 10, borderRadius: 10, alignItems: 'center', minWidth: 80, alignSelf: 'center', marginBottom: 10, shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.1, shadowRadius: 4, elevation: 3 },
+  scoreRow: { flexDirection: 'row', alignItems: 'center', gap: 10, marginBottom: 10 },
+  scoreBox: { backgroundColor: '#FFF', paddingHorizontal: 20, paddingVertical: 10, borderRadius: 10, alignItems: 'center', minWidth: 80, shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.1, shadowRadius: 4, elevation: 3 },
+  levelBox: { backgroundColor: '#FFF', paddingHorizontal: 16, paddingVertical: 10, borderRadius: 10, alignItems: 'center', minWidth: 70, shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.1, shadowRadius: 4, elevation: 3 },
+  levelLabel: { fontSize: 12, color: '#8B7355', fontWeight: '600', marginBottom: 4 },
+  levelValue: { fontSize: 32, fontWeight: '900', color: '#FF8C42' },
   scoreLabel: { fontSize: 12, color: '#8B7355', fontWeight: '600', marginBottom: 4 },
   scoreValue: { fontSize: 32, fontWeight: '900', color: '#FF8C42' },
   scoreBonusText: {
@@ -738,28 +781,28 @@ const styles = StyleSheet.create({
   },
   
   // Characters (Worker & Customer)
-  charactersRow: { flexDirection: 'row', justifyContent: 'space-around', paddingHorizontal: 20, marginBottom: 15, marginTop: 15 },
+  charactersRow: { flexDirection: 'row', justifyContent: 'space-around', paddingHorizontal: 20, marginBottom: 6, marginTop: 6 },
   characterWrapper: { 
     alignItems: 'center', 
     flex: 1,
     justifyContent: 'flex-end',
   },
   workerImage: {
-    height: 150,
+    height: 110,
     aspectRatio: 677 / 369,
   },
   customerImage: {
-    height: 150,
+    height: 110,
     aspectRatio: 677 / 369,
   },
   customerImageSmall: {
-    height: 100,
+    height: 75,
     aspectRatio: 677 / 369,
   },
   characterEmojiWrapper: {
     position: 'relative',
     width: 275,
-    height: 150,
+    height: 110,
     alignItems: 'center',
     justifyContent: 'flex-end',
   },
@@ -820,9 +863,9 @@ const styles = StyleSheet.create({
   },
   
   // Delivery Animation
-  deliveryAnimation: { position: 'absolute', top: '30%', left: '50%', marginLeft: -60, alignItems: 'center', zIndex: 100 },
-  deliveryEmoji: { fontSize: 48 },
-  deliveryText: { fontSize: 16, fontWeight: 'bold', color: '#FF8C42', marginTop: 4 },
+  deliveryAnimation: { position: 'absolute', top: '28%', left: '50%', marginLeft: -80, alignItems: 'center', zIndex: 100 },
+  deliveryCard: { backgroundColor: '#FFF', borderRadius: 20, paddingHorizontal: 20, paddingVertical: 14, alignItems: 'center', shadowColor: '#FF8C42', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.3, shadowRadius: 10, elevation: 10, borderWidth: 2, borderColor: '#FFD700' },
+  deliveryText: { fontSize: 15, fontWeight: '800', color: '#FF8C42', marginTop: 6, letterSpacing: 1 },
   
   sumBadgeWrapper: { flex: 1, alignItems: 'center', justifyContent: 'center', pointerEvents: 'none' },
   sumBadge: { color: '#FFF', fontWeight: '900', fontSize: 22, textShadowColor: 'rgba(0,0,0,0.6)', textShadowOffset: { width: 0, height: 1 }, textShadowRadius: 4 },
