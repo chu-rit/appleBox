@@ -234,11 +234,12 @@ export default function FruitBoxScreen({ onBackToStart, mapSize = DEFAULT_GRID_S
   
   const addTime = useCallback((bonusSeconds) => {
     const maxTime = getMaxTime();
-    const newTime = timeLeftRef.current + bonusSeconds;
-    const overflowScore = newTime > maxTime ? Math.floor((newTime - maxTime) * 10) : 0;
-    const actualBonus = Math.round(Math.min(bonusSeconds, maxTime - timeLeftRef.current));
+    const currentTime = timeLeftRef.current;
+    const overflowScore = (currentTime + bonusSeconds) > maxTime ? Math.floor((currentTime + bonusSeconds - maxTime) * 10) : 0;
+    const actualBonus = Math.round(Math.min(bonusSeconds, maxTime - currentTime));
     
-    setTimeLeft(prev => Math.min(maxTime, prev + bonusSeconds));
+    timeLeftRef.current = Math.min(maxTime, currentTime + bonusSeconds);
+    setTimeLeft(timeLeftRef.current);
     
     // Show time bonus text (actual amount added)
     setShowTimeBonus({ amount: actualBonus });
