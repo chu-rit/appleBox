@@ -102,13 +102,22 @@ const generateBoard = (score = 0, gridSize = DEFAULT_GRID_SIZE, customerRequest 
 const CELL_MARGIN = 2;
 const START_TIME = 15;
 const getMaxTime = () => START_TIME;
-// Customer request ranges based on score level
-const getCustomerRequestRange = (score) => {
-  const max = 9 + Math.floor(score / 100);
-  return { min: 5, max };
+// 레벨업 증분: Lv1→2: 100, Lv2→3: 120, Lv3→4: 140, +20씩 증가
+// 누적 threshold(lv) = sum(i=0..lv-2) of (100+20*i) = (lv-1)*100 + 10*(lv-1)*(lv-2)
+const getLevelThreshold = (lv) => lv <= 1 ? 0 : (lv - 1) * 100 + 10 * (lv - 1) * (lv - 2);
+
+const getLevel = (score) => {
+  let lv = 1;
+  while (score >= getLevelThreshold(lv + 1)) lv++;
+  return lv;
 };
 
-const getLevel = (score) => Math.floor(score / 100) + 1;
+// Customer request ranges based on level
+const getCustomerRequestRange = (score) => {
+  const lv = getLevel(score);
+  const max = 9 + Math.floor((lv - 1) / 2);
+  return { min: 5, max };
+};
 
 const generateCustomerRequest = (score) => {
   const { min, max } = getCustomerRequestRange(score);
