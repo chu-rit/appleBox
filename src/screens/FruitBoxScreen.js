@@ -32,16 +32,39 @@ const customerImgs = {
   c1: require('../assets/img/C1.png'),
   c2: require('../assets/img/C2.png'),
   c3: require('../assets/img/C3.png'),
+  c4: require('../assets/img/C4.png'),
+  c5: require('../assets/img/C5.png'),
 };
 
-const getCustomerImg = (request, seed) => {
-  if (request <= 9) return customerImgs.c2;
+const getCustomerImg = (request, seed, isC5) => {
+  if (isC5) return customerImgs.c5;
+  if (request <= 9) return seed % 2 === 0 ? customerImgs.c2 : customerImgs.c4;
   return seed % 2 === 0 ? customerImgs.c1 : customerImgs.c3;
 };
 
 const { width } = Dimensions.get('window');
 const DEFAULT_GRID_SIZE = 6;
 const FRUITS = ['apple', 'orange', 'grape', 'pear', 'watermelon', 'strawberry', 'peach', 'pineapple'];
+
+const FRUIT_ICON = {
+  apple: AppleIcon, orange: OrangeIcon, grape: GrapeIcon, pear: PearIcon,
+  watermelon: WatermelonIcon, strawberry: StrawberryIcon, peach: PeachIcon, pineapple: PineappleIcon,
+};
+
+const generateC5Condition = (board) => {
+  const type = Math.random() < 0.5 ? 'include' : 'exclude';
+  if (type === 'include' && board) {
+    const presentFruits = [...new Set(
+      board.flat().filter(cell => !cell.removed).map(cell => cell.fruit)
+    )];
+    const fruit = presentFruits.length > 0
+      ? presentFruits[Math.floor(Math.random() * presentFruits.length)]
+      : FRUITS[Math.floor(Math.random() * FRUITS.length)];
+    return { fruit, type };
+  }
+  const fruit = FRUITS[Math.floor(Math.random() * FRUITS.length)];
+  return { fruit, type };
+};
 
 const getNextNumber = (currentTargetSum) => {
   const roll = Math.random();
@@ -78,7 +101,7 @@ const generateBoard = (score = 0, gridSize = DEFAULT_GRID_SIZE, customerRequest 
 
 const CELL_MARGIN = 2;
 const START_TIME = 15;
-const getMaxTime = (level) => level >= 5 ? 25 : level >= 3 ? 20 : 15;
+const getMaxTime = () => START_TIME;
 // Customer request ranges based on score level
 const getCustomerRequestRange = (score) => {
   const max = 9 + Math.floor(score / 100);
@@ -127,17 +150,21 @@ export default function FruitBoxScreen({ onBackToStart, mapSize = DEFAULT_GRID_S
   const [gameOver, setGameOver] = useState(false);
   const [score, setScore] = useState(0);
   const [customerRequest, setCustomerRequest] = useState(() => generateCustomerRequest(0));
-  const [customerImgSeed, setCustomerImgSeed] = useState(() => Math.floor(Math.random() * 2));
+  const [customerImgSeed, setCustomerImgSeed] = useState(() => Math.floor(Math.random() * 20));
+  const [c5Condition, setC5Condition] = useState(null);
   const [showDelivery, setShowDelivery] = useState(false);
   const [timeLeft, setTimeLeft] = useState(START_TIME);
   const [showTimeBonus, setShowTimeBonus] = useState(null); // { amount: number }
   const [showScoreBonus, setShowScoreBonus] = useState(null); // { amount: number }
   const [showLevelUp, setShowLevelUp] = useState(false);
+  const [paused, setPaused] = useState(false);
   const prevLevelRef = useRef(1);
   const [chance, setChance] = useState(1);
   const [hintCells, setHintCells] = useState(null); // { r1, c1, r2, c2 }
   const chanceUsedRef = useRef(false);
   const combosRef = useRef([]);
+  const c5ConditionRef = useRef(c5Condition);
+  c5ConditionRef.current = c5Condition;
   const timeLeftRef = useRef(timeLeft);
   timeLeftRef.current = timeLeft;
   const dragStartPos = useRef({ x: 0, y: 0 });
@@ -176,8 +203,12 @@ export default function FruitBoxScreen({ onBackToStart, mapSize = DEFAULT_GRID_S
   
   // Timer
   useEffect(() => {
-    if (gameOver) return;
+    if (gameOver || paused) {
+      clearInterval(timerRef.current);
+      return;
+    }
     timerRef.current = setInterval(() => {
+      if (possibleCombinationsRef.current === 0) return;
       setTimeLeft(prev => {
         if (prev <= 0.1) {
           setGameOver(true);
@@ -199,10 +230,10 @@ export default function FruitBoxScreen({ onBackToStart, mapSize = DEFAULT_GRID_S
       });
     }, 100);
     return () => clearInterval(timerRef.current);
-  }, [gameOver]);
+  }, [gameOver, paused]);
   
   const addTime = useCallback((bonusSeconds) => {
-    const maxTime = getMaxTime(getLevel(score));
+    const maxTime = getMaxTime();
     const newTime = timeLeftRef.current + bonusSeconds;
     const overflowScore = newTime > maxTime ? Math.floor((newTime - maxTime) * 10) : 0;
     const actualBonus = Math.round(Math.min(bonusSeconds, maxTime - timeLeftRef.current));
@@ -300,16 +331,28 @@ export default function FruitBoxScreen({ onBackToStart, mapSize = DEFAULT_GRID_S
               }
             }
             const cellCount = (r2 - r1 + 1) * (c2 - c1 + 1);
-            if (sum === customerRequest && cellCount >= 2) result.push({ r1, c1, r2, c2 });
+            if (sum === customerRequest && cellCount >= 2) {
+              if (c5Condition) {
+                let hasFruit = false;
+                for (let r = r1; r <= r2; r++)
+                  for (let c = c1; c <= c2; c++)
+                    if (!board[r][c].removed && board[r][c].fruit === c5Condition.fruit) hasFruit = true;
+                const fruitOk = c5Condition.type === 'include' ? hasFruit : !hasFruit;
+                if (!fruitOk) continue;
+              }
+              result.push({ r1, c1, r2, c2 });
+            }
           }
         }
       }
     }
     return result;
-  }, [board]);
+  }, [board, c5Condition]);
 
   combosRef.current = combos;
   const possibleCombinations = combos.length;
+  const possibleCombinationsRef = useRef(possibleCombinations);
+  possibleCombinationsRef.current = possibleCombinations;
 
   const assistCombos = useMemo(() => {
     const picked = [];
@@ -360,8 +403,8 @@ export default function FruitBoxScreen({ onBackToStart, mapSize = DEFAULT_GRID_S
 
   const removeApples = useCallback((minRow, maxRow, minCol, maxCol) => {
     const count = (maxRow - minRow + 1) * (maxCol - minCol + 1);
-    const points = customerRequest + count;
     const level = getLevel(score);
+    const points = level + count;
     const levelBonus = level >= 5 ? 4 : level >= 3 ? 2 : 0;
     const timeBonus = (count >= 4 ? 7 : count >= 3 ? 6 : 5) + levelBonus;
     
@@ -384,14 +427,18 @@ export default function FruitBoxScreen({ onBackToStart, mapSize = DEFAULT_GRID_S
       setShowScoreBonus({ amount: points + scoreBonus });
       // Generate new customer request based on new score
       setCustomerRequest(generateCustomerRequest(newScore));
-      setCustomerImgSeed(Math.floor(Math.random() * 2));
+      const newSeed = Math.floor(Math.random() * 20);
+      setCustomerImgSeed(newSeed);
+      const newLevel = getLevel(newScore);
+      const c5Threshold = newLevel >= 18 ? 8 : newLevel >= 15 ? 6 : newLevel >= 10 ? 4 : 0;
+      const isC5 = newSeed < c5Threshold;
+      setC5Condition(isC5 ? generateC5Condition(board) : null);
       customerSlideX.value = 200;
       customerSlideOpacity.value = 0;
       customerSlideX.value = withSpring(0, { damping: 18, stiffness: 120 });
       customerSlideOpacity.value = withTiming(1, { duration: 200 });
       scoreScale.value = withSpring(1.15, { damping: 12 });
       // Level up check
-      const newLevel = getLevel(newScore);
       if (newLevel > prevLevelRef.current) {
         prevLevelRef.current = newLevel;
         setShowLevelUp(true);
@@ -531,10 +578,25 @@ export default function FruitBoxScreen({ onBackToStart, mapSize = DEFAULT_GRID_S
     if (currentSelection) {
       const { sum, minRow, maxRow, minCol, maxCol } = calculateSum(currentSelection);
       if (sum === customerRequest) {
-        removeApples(minRow, maxRow, minCol, maxCol);
+        const cond = c5ConditionRef.current;
+        let fruitOk = true;
+        if (cond) {
+          let hasFruit = false;
+          for (let r = minRow; r <= maxRow; r++) {
+            for (let c = minCol; c <= maxCol; c++) {
+              if (!board[r][c].removed && board[r][c].fruit === cond.fruit) {
+                hasFruit = true;
+              }
+            }
+          }
+          fruitOk = cond.type === 'include' ? hasFruit : !hasFruit;
+        }
+        if (fruitOk) {
+          removeApples(minRow, maxRow, minCol, maxCol);
+        }
       }
     }
-  }, [removeApples, customerRequest, gameOver]);
+  }, [removeApples, customerRequest, gameOver, board]);
 
   const panGesture = Gesture.Pan()
     .onBegin((e) => { onDragStart(e.x, e.y); })
@@ -545,7 +607,7 @@ export default function FruitBoxScreen({ onBackToStart, mapSize = DEFAULT_GRID_S
   useEffect(() => {
     const newBoard = generateBoard(0, GRID_SIZE, customerRequest);
     setBoard(newBoard);
-  }, [customerRequest, GRID_SIZE]);
+  }, [GRID_SIZE]);
 
   // Initial customer slide-in on mount
   useEffect(() => {
@@ -566,31 +628,34 @@ export default function FruitBoxScreen({ onBackToStart, mapSize = DEFAULT_GRID_S
   return (
     <View style={styles.container}>
       <View style={styles.header}>
-        <TouchableOpacity style={styles.backBtn} onPress={onBackToStart}><Text style={styles.backIcon}>◀</Text></TouchableOpacity>
-        <Text style={styles.title}>FRUIT BOX</Text>
-        <TouchableOpacity style={styles.resetBtn} onPress={resetBoard}><Text style={styles.resetIcon}>⟲</Text></TouchableOpacity>
+        <TouchableOpacity style={styles.backBtn} onPress={onBackToStart}>
+          <Svg width={28} height={28} viewBox="0 0 28 28">
+            <Path d="M18 5 L9 14 L18 23" stroke="#8B7355" strokeWidth="2.8" strokeLinecap="round" strokeLinejoin="round" fill="none" />
+          </Svg>
+        </TouchableOpacity>
+        {/* <TouchableOpacity style={styles.resetBtn} onPress={() => setPaused(p => !p)}><Text style={styles.resetIcon}>{paused ? '▶' : '⏸'}</Text></TouchableOpacity> */}
       </View>
 
       {/* Score + Level Row */}
       <View style={{ alignItems: 'center' }}>
         <View style={styles.scoreRow}>
+          <View style={styles.levelBox}>
+            <Text style={styles.levelLabel}>LEVEL</Text>
+            <Text style={styles.levelValue}>{getLevel(score)}</Text>
+          </View>
           <TouchableOpacity style={styles.scoreBox} onPress={handlePossibleTap}>
             <Text style={styles.scoreLabel}>SCORE</Text>
             <Animated.Text style={[styles.scoreValue, useAnimatedStyle(() => ({ transform: [{ scale: scoreScale.value }] }))]}>
               {score}
             </Animated.Text>
           </TouchableOpacity>
-          <View style={styles.levelBox}>
-            <Text style={styles.levelLabel}>LEVEL</Text>
-            <Text style={styles.levelValue}>{getLevel(score)}</Text>
-          </View>
         </View>
         {showScoreBonus && (
           <Text style={styles.scoreBonusText}>+{showScoreBonus.amount}점</Text>
         )}
       </View>
 
-      <TimerBar timeLeft={timeLeft} maxTime={getMaxTime(getLevel(score))} flashValue={timerBarFlash} showTimeBonus={showTimeBonus} />
+      <TimerBar timeLeft={timeLeft} maxTime={getMaxTime()} flashValue={timerBarFlash} showTimeBonus={showTimeBonus} />
 
       {/* Level Up Overlay */}
       {showLevelUp && (
@@ -611,23 +676,40 @@ export default function FruitBoxScreen({ onBackToStart, mapSize = DEFAULT_GRID_S
         {/* Customer (Right) */}
         <View style={styles.characterWrapper}>
           <Animated.View style={[styles.characterEmojiWrapper, customerSlideStyle]}>
-            <Image source={getCustomerImg(customerRequest, customerImgSeed)} style={customerRequest <= 9 ? styles.customerImageSmall : styles.customerImage} resizeMode="contain" />
-            <View style={styles.svgBubbleContainer}>
+            <Image source={getCustomerImg(customerRequest, customerImgSeed, c5Condition !== null)} style={customerRequest <= 9 ? styles.customerImageSmall : styles.customerImage} resizeMode="contain" />
+            <View style={[styles.svgBubbleContainer, c5Condition && styles.svgBubbleContainerLarge]}>
               {Platform.OS === 'web' ? (
                 <img
-                  src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 200 150'%3E%3Cpath d='M100 125C138.66 125 170 102.614 170 75C170 47.3858 138.66 25 100 25C61.3401 25 30 47.3858 30 75C30 89.5167 38.6946 102.49 52.4838 111.396C51.6885 116.516 49.3333 124.833 40 135C53.3333 133 70 128.5 78.5 122.5C85.4221 124.128 92.6288 125 100 125Z' fill='%23FF6B42'/%3E%3C/svg%3E"
-                  style={{ width: 70, height: 50, position: 'absolute' }}
+                  src={c5Condition
+                    ? "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 200 180'%3E%3Cpath d='M100 155C138.66 155 170 129.614 170 98C170 66.3858 138.66 41 100 41C61.3401 41 30 66.3858 30 98C30 114.517 38.6946 129.49 52.4838 139.396C51.6885 145.516 49.3333 155.833 40 167C53.3333 165 70 160.5 78.5 153.5C85.4221 154.628 92.6288 155 100 155Z' fill='%23FF6B42'/%3E%3C/svg%3E"
+                    : "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 200 150'%3E%3Cpath d='M100 125C138.66 125 170 102.614 170 75C170 47.3858 138.66 25 100 25C61.3401 25 30 47.3858 30 75C30 89.5167 38.6946 102.49 52.4838 111.396C51.6885 116.516 49.3333 124.833 40 135C53.3333 133 70 128.5 78.5 122.5C85.4221 124.128 92.6288 125 100 125Z' fill='%23FF6B42'/%3E%3C/svg%3E"
+                  }
+                  style={{ width: '100%', height: '100%', position: 'absolute' }}
                   alt=""
                 />
               ) : (
-                <Svg width={70} height={50} viewBox="0 0 200 150">
-                  <Path
-                    d="M100 125C138.66 125 170 102.614 170 75C170 47.3858 138.66 25 100 25C61.3401 25 30 47.3858 30 75C30 89.5167 38.6946 102.49 52.4838 111.396C51.6885 116.516 49.3333 124.833 40 135C53.3333 133 70 128.5 78.5 122.5C85.4221 124.128 92.6288 125 100 125Z"
-                    fill="#FF6B42"
-                  />
-                </Svg>
+                c5Condition ? (
+                  <Svg width="100%" height="100%" viewBox="0 0 200 180">
+                    <Path d="M100 155C138.66 155 170 129.614 170 98C170 66.3858 138.66 41 100 41C61.3401 41 30 66.3858 30 98C30 114.517 38.6946 129.49 52.4838 139.396C51.6885 145.516 49.3333 155.833 40 167C53.3333 165 70 160.5 78.5 153.5C85.4221 154.628 92.6288 155 100 155Z" fill="#FF6B42" />
+                  </Svg>
+                ) : (
+                  <Svg width="100%" height="100%" viewBox="0 0 200 150">
+                    <Path d="M100 125C138.66 125 170 102.614 170 75C170 47.3858 138.66 25 100 25C61.3401 25 30 47.3858 30 75C30 89.5167 38.6946 102.49 52.4838 111.396C51.6885 116.516 49.3333 124.833 40 135C53.3333 133 70 128.5 78.5 122.5C85.4221 124.128 92.6288 125 100 125Z" fill="#FF6B42" />
+                  </Svg>
+                )
               )}
-              <Text style={styles.svgBubbleText}>{customerRequest}</Text>
+              <View style={styles.bubbleContent}>
+                <Text style={styles.svgBubbleText}>{customerRequest}</Text>
+                {c5Condition && (() => {
+                  const FruitIconComp = FRUIT_ICON[c5Condition.fruit];
+                  return (
+                    <View style={styles.bubbleFruitRow}>
+                      {FruitIconComp && <FruitIconComp size={20} />}
+                      {c5Condition.type === 'exclude' && <Text style={styles.bubbleFruitType}>❌</Text>}
+                    </View>
+                  );
+                })()}
+              </View>
             </View>
           </Animated.View>
         </View>
@@ -636,8 +718,14 @@ export default function FruitBoxScreen({ onBackToStart, mapSize = DEFAULT_GRID_S
 
       {!gameOver && possibleCombinations === 0 && (
         <View style={styles.noComboBanner}>
-          <Text style={styles.noComboText}>No combinations available!</Text>
-          <Text style={styles.noComboBtn} onPress={resetBoard}>Refresh Board</Text>
+          <View style={styles.noComboPopup}>
+            <Text style={styles.noComboEmoji}>🔄</Text>
+            <Text style={styles.noComboTitle}>조합 없음!</Text>
+            <Text style={styles.noComboDesc}>가능한 조합이 없습니다{`\n`}보드를 새로고침하세요</Text>
+            <TouchableOpacity style={styles.noComboBtn} onPress={() => { setPaused(false); resetBoard(); }}>
+              <Text style={styles.noComboBtnText}>새로고침</Text>
+            </TouchableOpacity>
+          </View>
         </View>
       )}
 
@@ -811,10 +899,9 @@ function Cell({ cell, anims, isSelected, cellSize }) {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#FFF8E7', paddingTop: 40, overflow: 'hidden' },
-  header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 20, marginBottom: 10 },
-  backBtn: { width: 44, height: 44, backgroundColor: '#FF8C42', borderRadius: 22, justifyContent: 'center', alignItems: 'center', shadowColor: '#E67E22', shadowOffset: { width: 0, height: 3 }, shadowOpacity: 0.4, shadowRadius: 6, elevation: 6, borderWidth: 2, borderColor: '#FFD700' },
-  backIcon: { color: '#FFF', fontSize: 20, fontWeight: 'bold', includeFontPadding: false, textAlign: 'center', textAlignVertical: 'center', marginTop: -2 },
+  container: { flex: 1, backgroundColor: '#FFF8E7', paddingTop: 12, overflow: 'hidden' },
+  header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 20, marginBottom: 2 },
+  backBtn: { width: 40, height: 40, backgroundColor: 'rgba(139,115,85,0.12)', borderRadius: 12, justifyContent: 'center', alignItems: 'center' },
   title: { fontSize: 24, fontWeight: '900', color: '#FF8C42', letterSpacing: 2 },
   resetBtn: { width: 44, height: 44, backgroundColor: '#4CAF50', borderRadius: 22, justifyContent: 'center', alignItems: 'center', shadowColor: '#388E3C', shadowOffset: { width: 0, height: 3 }, shadowOpacity: 0.4, shadowRadius: 6, elevation: 6, borderWidth: 2, borderColor: '#81C784' },
   resetIcon: { color: '#FFF', fontSize: 22, fontWeight: 'bold', includeFontPadding: false, textAlign: 'center', textAlignVertical: 'center', marginTop: -2 },
@@ -826,7 +913,7 @@ const styles = StyleSheet.create({
   levelUpNum: { fontSize: 22, fontWeight: '800', color: '#FFD700', marginTop: 4 },
 
   // Score Box
-  scoreRow: { flexDirection: 'row', alignItems: 'center', gap: 10, marginBottom: 10 },
+  scoreRow: { flexDirection: 'row', alignItems: 'center', gap: 10, marginBottom: 6 },
   scoreBox: { backgroundColor: '#FFF', paddingHorizontal: 20, paddingVertical: 10, borderRadius: 10, alignItems: 'center', minWidth: 80, shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.1, shadowRadius: 4, elevation: 3 },
   levelBox: { backgroundColor: '#FFF', paddingHorizontal: 16, paddingVertical: 10, borderRadius: 10, alignItems: 'center', minWidth: 70, shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.1, shadowRadius: 4, elevation: 3 },
   levelLabel: { fontSize: 12, color: '#8B7355', fontWeight: '600', marginBottom: 4 },
@@ -878,12 +965,30 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  svgBubbleText: { 
+  svgBubbleContainerLarge: {
+    width: 80,
+    height: 70,
+  },
+  bubbleContent: {
     position: 'absolute',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 0,
+  },
+  svgBubbleText: { 
     fontSize: 16, 
     fontWeight: '900', 
     color: '#FFF',
-    top: 12,
+    lineHeight: 18,
+  },
+  bubbleFruitRow: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    position: 'relative',
+  },
+  bubbleFruitType: {
+    position: 'absolute',
+    fontSize: 14,
   },
   // Cartoon style bubble
   cartoonBubble: { 
@@ -933,9 +1038,13 @@ const styles = StyleSheet.create({
   sumBadgePerfect: { color: '#AFFFB0', textShadowColor: 'rgba(0,100,0,0.5)' },
   board: { flex: 1, justifyContent: 'center', alignItems: 'center' },
   boardDisabled: { opacity: 0.3 },
-  noComboBanner: { marginHorizontal: 20, marginBottom: 6, backgroundColor: '#FFF3CD', borderRadius: 12, paddingVertical: 10, paddingHorizontal: 16, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', borderWidth: 1, borderColor: '#FFCA28' },
-  noComboText: { fontSize: 13, color: '#8B6914', fontWeight: 'bold' },
-  noComboBtn: { fontSize: 13, color: '#FFF', backgroundColor: '#FF8C42', paddingHorizontal: 12, paddingVertical: 6, borderRadius: 20, fontWeight: 'bold', overflow: 'hidden' },
+  noComboBanner: { position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, alignItems: 'center', justifyContent: 'center', zIndex: 100 },
+  noComboPopup: { backgroundColor: 'rgba(30,20,10,0.92)', borderRadius: 24, paddingVertical: 28, paddingHorizontal: 32, alignItems: 'center', borderWidth: 2, borderColor: '#FF8C42', shadowColor: '#000', shadowOffset: { width: 0, height: 6 }, shadowOpacity: 0.4, shadowRadius: 16, elevation: 12 },
+  noComboEmoji: { fontSize: 40, marginBottom: 8 },
+  noComboTitle: { fontSize: 22, fontWeight: '900', color: '#FF8C42', marginBottom: 8 },
+  noComboDesc: { fontSize: 14, color: '#FFE0B2', textAlign: 'center', marginBottom: 20, lineHeight: 20 },
+  noComboBtn: { backgroundColor: '#FF8C42', paddingHorizontal: 28, paddingVertical: 12, borderRadius: 20 },
+  noComboBtnText: { fontSize: 16, fontWeight: '900', color: '#FFF' },
   gameOverOverlay: { position: 'absolute', top: '40%', left: 20, right: 20, backgroundColor: '#FFF8E7', borderRadius: 20, padding: 30, alignItems: 'center', zIndex: 1000, shadowColor: '#FF8C42', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.3, shadowRadius: 12, elevation: 8, borderWidth: 3, borderColor: '#FF8C42' },
   gameOverText: { fontSize: 36, fontWeight: '900', color: '#FF8C42', marginBottom: 12, letterSpacing: 2 },
   gameOverScore: { fontSize: 24, color: '#8B7355', fontWeight: 'bold', marginBottom: 24 },

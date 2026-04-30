@@ -6,55 +6,76 @@ import {
   TouchableOpacity,
   Dimensions,
 } from 'react-native';
+import AppleIcon from '../assets/icons/AppleIcon';
+import OrangeIcon from '../assets/icons/OrangeIcon';
+import GrapeIcon from '../assets/icons/GrapeIcon';
+import StrawberryIcon from '../assets/icons/StrawberryIcon';
+import PearIcon from '../assets/icons/PearIcon';
+import WatermelonIcon from '../assets/icons/WatermelonIcon';
+import PeachIcon from '../assets/icons/PeachIcon';
+import PineappleIcon from '../assets/icons/PineappleIcon';
+import FruitBoxLogo from '../assets/icons/FruitBoxLogo';
 
 const { width, height } = Dimensions.get('window');
 
+const BG_FRUITS = [
+  { Icon: AppleIcon,       size: 55, top: height*0.04,  left: width*0.05,  rotate: '-15deg', opacity: 0.18 },
+  { Icon: OrangeIcon,      size: 48, top: height*0.07,  right: width*0.06, rotate: '20deg',  opacity: 0.18 },
+  { Icon: GrapeIcon,       size: 52, top: height*0.17,  left: width*0.72,  rotate: '-8deg',  opacity: 0.15 },
+  { Icon: StrawberryIcon,  size: 44, top: height*0.25,  left: width*0.03,  rotate: '12deg',  opacity: 0.18 },
+  { Icon: PearIcon,        size: 50, top: height*0.38,  right: width*0.04, rotate: '-20deg', opacity: 0.15 },
+  { Icon: WatermelonIcon,  size: 60, top: height*0.55,  left: width*0.05,  rotate: '8deg',   opacity: 0.15 },
+  { Icon: PeachIcon,       size: 46, top: height*0.62,  right: width*0.07, rotate: '15deg',  opacity: 0.18 },
+  { Icon: PineappleIcon,   size: 56, top: height*0.72,  left: width*0.68,  rotate: '-10deg', opacity: 0.13 },
+  { Icon: AppleIcon,       size: 42, top: height*0.80,  left: width*0.07,  rotate: '25deg',  opacity: 0.13 },
+  { Icon: OrangeIcon,      size: 50, top: height*0.85,  right: width*0.10, rotate: '-5deg',  opacity: 0.15 },
+];
+
 export default function StartScreen({ onStart, onSettings, onRanking, onLogoPress, gameMode = 'apple' }) {
   const isFruitMode = gameMode === 'fruit';
-  
+
   return (
     <View style={[styles.container, isFruitMode && styles.containerFruit]}>
-      {/* Background Pattern */}
-      <View style={styles.background}>
-        {/* Decorative fruits */}
-        <View style={[styles.apple, styles.apple1]}>
-          <View style={[styles.appleBody, isFruitMode && styles.fruitBody1]} />
-          <View style={styles.appleLeaf} />
+
+      {/* Background fruit icons */}
+      {BG_FRUITS.map(({ Icon, size, top, left, right, rotate, opacity }, i) => (
+        <View
+          key={i}
+          pointerEvents="none"
+          style={[styles.bgFruit, { top, left, right, opacity, transform: [{ rotate }] }]}
+        >
+          <Icon size={size} />
         </View>
-        <View style={[styles.apple, styles.apple2]}>
-          <View style={[styles.appleBody, isFruitMode && styles.fruitBody2]} />
-          <View style={styles.appleLeaf} />
-        </View>
-        <View style={[styles.apple, styles.apple3]}>
-          <View style={[styles.appleBody, isFruitMode && styles.fruitBody3]} />
-          <View style={styles.appleLeaf} />
-        </View>
-      </View>
+      ))}
 
       {/* Title Section */}
       <View style={styles.titleContainer}>
-        <TouchableOpacity style={[styles.iconBox, isFruitMode && styles.iconBoxFruit]} onPress={onLogoPress} activeOpacity={0.7}>
-          <View style={styles.iconApple}>
-            <View style={[styles.iconBody, isFruitMode && styles.iconBodyFruit]} />
-            <View style={styles.iconLeaf} />
-          </View>
+        <TouchableOpacity style={styles.iconBox} onPress={onLogoPress} activeOpacity={0.8}>
+          <AppleIcon size={72} />
         </TouchableOpacity>
-        <Text style={[styles.title, isFruitMode && styles.titleFruit]}>{isFruitMode ? 'FRUIT BOX' : 'APPLE BOX'}</Text>
+        <FruitBoxLogo width={280} isFruitMode={isFruitMode} />
         <Text style={styles.subtitle}>{isFruitMode ? 'Mix & Match' : 'Collect & Stack'}</Text>
+        <View style={styles.fruitRow}>
+          <OrangeIcon size={28} />
+          <GrapeIcon size={28} />
+          <StrawberryIcon size={28} />
+          <PearIcon size={28} />
+          <WatermelonIcon size={28} />
+        </View>
       </View>
 
       {/* Menu Buttons */}
       <View style={styles.menuContainer}>
         <TouchableOpacity style={[styles.button, isFruitMode && styles.buttonFruit]} onPress={onStart}>
-          <Text style={[styles.buttonText, isFruitMode && styles.buttonTextFruit]}>START GAME</Text>
+          <Text style={styles.buttonText}>▶  START GAME</Text>
         </TouchableOpacity>
 
         <TouchableOpacity style={[styles.buttonSecondary, isFruitMode && styles.buttonSecondaryFruit]} onPress={onRanking}>
-          <Text style={[styles.buttonSecondaryText, isFruitMode && styles.buttonSecondaryTextFruit]}>RANKING</Text>
+          <Text style={[styles.buttonSecondaryText, isFruitMode && styles.buttonSecondaryTextFruit]}>🏆  RANKING</Text>
         </TouchableOpacity>
 
         <TouchableOpacity style={[styles.buttonSecondary, isFruitMode && styles.buttonSecondaryFruit]} onPress={onSettings}>
-          <Text style={[styles.buttonSecondaryText, isFruitMode && styles.buttonSecondaryTextFruit]}>SETTINGS</Text>
+          <Text style={[styles.buttonSecondaryText, isFruitMode && styles.buttonSecondaryTextFruit]}>⚙  SETTINGS</Text>
         </TouchableOpacity>
       </View>
 
@@ -69,145 +90,61 @@ export default function StartScreen({ onStart, onSettings, onRanking, onLogoPres
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#FFF8E7', // Cream background
+    backgroundColor: '#FFF8E7',
   },
   containerFruit: {
-    backgroundColor: '#FFF5E6', // Orange-tinted cream
+    backgroundColor: '#FFF5E6',
   },
-  background: {
+  bgFruit: {
     position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-    bottom: 0,
   },
-  // Decorative Apples
-  apple: {
-    position: 'absolute',
-    width: 60,
-    height: 70,
-    opacity: 0.15,
-  },
-  apple1: {
-    top: height * 0.1,
-    left: width * 0.1,
-    transform: [{ rotate: '-15deg' }],
-  },
-  apple2: {
-    top: height * 0.3,
-    right: width * 0.05,
-    transform: [{ rotate: '20deg' }],
-  },
-  apple3: {
-    bottom: height * 0.2,
-    left: width * 0.15,
-    transform: [{ rotate: '10deg' }],
-  },
-  appleBody: {
-    width: 50,
-    height: 55,
-    backgroundColor: '#FF6B6B',
-    borderRadius: 25,
-  },
-  fruitBody1: {
-    backgroundColor: '#FFB347', // Orange
-  },
-  fruitBody2: {
-    backgroundColor: '#9ED2C6', // Green
-  },
-  fruitBody3: {
-    backgroundColor: '#DDA0DD', // Plum
-  },
-  appleLeaf: {
-    position: 'absolute',
-    top: -8,
-    left: 15,
-    width: 20,
-    height: 15,
-    backgroundColor: '#4CAF50',
-    borderRadius: 10,
-    transform: [{ rotate: '-30deg' }],
-  },
-  // Title Section
   titleContainer: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    paddingTop: height * 0.1,
+    paddingTop: height * 0.08,
   },
   iconBox: {
-    width: 120,
-    height: 120,
+    width: 110,
+    height: 110,
     backgroundColor: '#FFF',
-    borderRadius: 30,
+    borderRadius: 28,
     justifyContent: 'center',
     alignItems: 'center',
-    marginBottom: 20,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.1,
-    shadowRadius: 8,
-    elevation: 5,
-  },
-  iconBoxFruit: {
+    marginBottom: 18,
     shadowColor: '#FF8C42',
+    shadowOffset: { width: 0, height: 6 },
     shadowOpacity: 0.2,
-  },
-  iconApple: {
-    width: 70,
-    height: 80,
-  },
-  iconBody: {
-    width: 60,
-    height: 65,
-    backgroundColor: '#FF4444',
-    borderRadius: 30,
-    alignSelf: 'center',
-  },
-  iconBodyFruit: {
-    backgroundColor: '#FF8C42', // Orange for fruit mode
-  },
-  iconLeaf: {
-    position: 'absolute',
-    top: -5,
-    left: 20,
-    width: 25,
-    height: 18,
-    backgroundColor: '#4CAF50',
-    borderRadius: 12,
-    transform: [{ rotate: '-25deg' }],
-  },
-  title: {
-    fontSize: 42,
-    fontWeight: '900',
-    color: '#FF4444',
-    letterSpacing: 4,
-    marginBottom: 8,
-  },
-  titleFruit: {
-    color: '#FF8C42', // Orange for fruit mode
+    shadowRadius: 12,
+    elevation: 8,
   },
   subtitle: {
-    fontSize: 16,
+    fontSize: 15,
     color: '#8B7355',
     letterSpacing: 2,
+    marginBottom: 14,
   },
-  // Menu
+  fruitRow: {
+    flexDirection: 'row',
+    gap: 8,
+    marginTop: 4,
+    opacity: 0.75,
+  },
   menuContainer: {
     paddingHorizontal: 40,
-    paddingBottom: height * 0.15,
-    gap: 15,
+    paddingBottom: height * 0.13,
+    gap: 14,
   },
   button: {
     backgroundColor: '#FF4444',
     paddingVertical: 18,
-    borderRadius: 15,
+    borderRadius: 16,
     alignItems: 'center',
     shadowColor: '#FF4444',
     shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
+    shadowOpacity: 0.35,
     shadowRadius: 8,
-    elevation: 5,
+    elevation: 6,
   },
   buttonFruit: {
     backgroundColor: '#FF8C42',
@@ -216,16 +153,13 @@ const styles = StyleSheet.create({
   buttonText: {
     color: '#FFF',
     fontSize: 18,
-    fontWeight: '700',
+    fontWeight: '800',
     letterSpacing: 1,
-  },
-  buttonTextFruit: {
-    color: '#FFF',
   },
   buttonSecondary: {
     backgroundColor: '#FFF',
-    paddingVertical: 16,
-    borderRadius: 15,
+    paddingVertical: 15,
+    borderRadius: 16,
     alignItems: 'center',
     borderWidth: 2,
     borderColor: '#FF4444',
@@ -236,16 +170,15 @@ const styles = StyleSheet.create({
   buttonSecondaryText: {
     color: '#FF4444',
     fontSize: 16,
-    fontWeight: '600',
+    fontWeight: '700',
     letterSpacing: 1,
   },
   buttonSecondaryTextFruit: {
     color: '#FF8C42',
   },
-  // Footer
   footer: {
     position: 'absolute',
-    bottom: 20,
+    bottom: 18,
     left: 0,
     right: 0,
     alignItems: 'center',
@@ -253,6 +186,6 @@ const styles = StyleSheet.create({
   version: {
     fontSize: 12,
     color: '#8B7355',
-    opacity: 0.6,
+    opacity: 0.5,
   },
 });
