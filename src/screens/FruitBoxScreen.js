@@ -656,12 +656,10 @@ export default function FruitBoxScreen({ onBackToStart, mapSize = DEFAULT_GRID_S
 
       <TimerBar timeLeft={timeLeft} maxTime={getMaxTime()} flashValue={timerBarFlash} showTimeBonus={showTimeBonus} />
 
-      {/* Level Up Overlay */}
+      {/* Level Up Banner */}
       {showLevelUp && (
-        <Animated.View style={[styles.levelUpOverlay, levelUpAnimStyle]}>
-          <Text style={styles.levelUpStar}>⭐</Text>
-          <Text style={styles.levelUpText}>LEVEL UP!</Text>
-          <Text style={styles.levelUpNum}>Lv.{getLevel(score)}</Text>
+        <Animated.View style={[styles.levelUpBanner, levelUpAnimStyle]}>
+          <Text style={styles.levelUpBannerText}>⭐ LEVEL UP! Lv.{getLevel(score)}</Text>
         </Animated.View>
       )}
 
@@ -906,10 +904,8 @@ const styles = StyleSheet.create({
   resetIcon: { color: '#FFF', fontSize: 22, fontWeight: 'bold', includeFontPadding: false, textAlign: 'center', textAlignVertical: 'center', marginTop: -2 },
   
   // Level Up Overlay
-  levelUpOverlay: { position: 'absolute', top: '30%', alignSelf: 'center', zIndex: 200, backgroundColor: '#FFF8E7', borderRadius: 24, paddingHorizontal: 40, paddingVertical: 24, alignItems: 'center', borderWidth: 3, borderColor: '#FFD700', shadowColor: '#FF8C42', shadowOffset: { width: 0, height: 6 }, shadowOpacity: 0.5, shadowRadius: 16, elevation: 20 },
-  levelUpStar: { fontSize: 40, marginBottom: 4 },
-  levelUpText: { fontSize: 32, fontWeight: '900', color: '#FF8C42', letterSpacing: 3 },
-  levelUpNum: { fontSize: 22, fontWeight: '800', color: '#FFD700', marginTop: 4 },
+  levelUpBanner: { position: 'absolute', top: 60, alignSelf: 'center', zIndex: 200, backgroundColor: '#FF8C42', borderRadius: 20, paddingHorizontal: 20, paddingVertical: 8 },
+  levelUpBannerText: { fontSize: 16, fontWeight: '900', color: '#FFF', letterSpacing: 1 },
 
   // Score Box
   scoreRow: { flexDirection: 'row', alignItems: 'center', gap: 10, marginBottom: 6 },
