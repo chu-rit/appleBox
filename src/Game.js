@@ -12,7 +12,7 @@ export default function Game() {
   const [running, setRunning] = useState(false);
   const animationRef = useRef(null);
   const [tick, setTick] = useState(0);
-  const [mapSize, setMapSize] = useState(7); // 5~8 configurable
+  const [mapSize, setMapSize] = useState(6); // 5~8 configurable
   const [gameMode, setGameMode] = useState('fruit'); // 'apple' or 'fruit'
 
   // Load saved mapSize on mount
