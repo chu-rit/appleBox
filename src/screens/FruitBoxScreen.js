@@ -405,8 +405,7 @@ export default function FruitBoxScreen({ onBackToStart, mapSize = DEFAULT_GRID_S
     const count = (maxRow - minRow + 1) * (maxCol - minCol + 1);
     const level = getLevel(score);
     const points = level + count;
-    const levelBonus = level >= 5 ? 4 : level >= 3 ? 2 : 0;
-    const timeBonus = (count >= 4 ? 7 : count >= 3 ? 6 : 5) + levelBonus;
+    const timeBonus = count >= 4 ? 7 : count >= 3 ? 6 : 5;
     
     // Play delivery animation first
     playDeliveryAnimation();
