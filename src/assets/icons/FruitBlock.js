@@ -11,17 +11,14 @@ const FruitBlock = ({
   selected = false,
   style,
   animated = false,
+  blockFill = '#FFB347',
+  blockStroke = '#FF8C42',
 }) => {
   const SvgComponent = animated ? AnimatedSvg : Svg;
   const padding = 2;
   const innerSize = size - padding * 2;
 
-  // Orange theme for all blocks
-  const getFruitColor = () => {
-    return { fill: '#FFB347', stroke: '#FF8C42' };
-  };
-
-  const color = getFruitColor();
+  const color = { fill: blockFill, stroke: blockStroke };
 
   return (
     <View style={[{ width: size, height: size }, style]}>

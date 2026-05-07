@@ -36,10 +36,11 @@ const customerImgs = {
   c5: require('../assets/img/C5.png'),
 };
 
-const getCustomerImg = (request, seed, isC5) => {
-  if (isC5) return customerImgs.c5;
-  if (request <= 9) return seed % 2 === 0 ? customerImgs.c2 : customerImgs.c4;
-  return seed % 2 === 0 ? customerImgs.c1 : customerImgs.c3;
+const getCustomerImg = (request, seed) => {
+  if (request >= 21) return customerImgs.c5;
+  if (request >= 16) return customerImgs.c3;
+  if (request >= 10) return customerImgs.c1;
+  return seed % 2 === 0 ? customerImgs.c2 : customerImgs.c4;
 };
 
 const { width } = Dimensions.get('window');
@@ -90,10 +91,11 @@ const getNextNumber = (currentTargetSum) => {
 };
 
 const generateBoard = (score = 0, gridSize = DEFAULT_GRID_SIZE, customerRequest = 5) => {
+  const fruits = getAvailableFruits(score);
   return Array(gridSize).fill(null).map(() =>
     Array(gridSize).fill(null).map(() => ({ 
       value: getNextNumber(customerRequest),
-      fruit: FRUITS[Math.floor(Math.random() * FRUITS.length)],
+      fruit: fruits[Math.floor(Math.random() * fruits.length)],
       removed: false,
     }))
   );
@@ -102,21 +104,51 @@ const generateBoard = (score = 0, gridSize = DEFAULT_GRID_SIZE, customerRequest 
 const CELL_MARGIN = 2;
 const START_TIME = 15;
 const getMaxTime = () => START_TIME;
-// 레벨업 증분: Lv1→2: 100, Lv2→3: 120, Lv3→4: 140, +20씩 증가
-// 누적 threshold(lv) = sum(i=0..lv-2) of (100+20*i) = (lv-1)*100 + 10*(lv-1)*(lv-2)
-const getLevelThreshold = (lv) => lv <= 1 ? 0 : (lv - 1) * 100 + 10 * (lv - 1) * (lv - 2);
+
+// 레벨: 1=봄, 2=여름, 3=가을, 4=겨울, 5=MAX
+// 임계값: 봄→여름:150, 여름→가을:400, 가을→겨울:700, 겨울→MAX:1000
+const LEVEL_THEMES = [
+  { bg: '#FFF8E7', blockFill: '#FFB347', blockStroke: '#FF8C42', name: '봄' },
+  { bg: '#E8F5E9', blockFill: '#66BB6A', blockStroke: '#388E3C', name: '여름' },
+  { bg: '#F5DEB3', blockFill: '#D2691E', blockStroke: '#8B4513', name: '가을' },
+  { bg: '#E3F2FD', blockFill: '#42A5F5', blockStroke: '#1565C0', name: '겨울' },
+  { bg: '#E8E0F5', blockFill: '#7C4DFF', blockStroke: '#5C35CC', name: 'MAX' },
+];
+
+const LEVEL_THRESHOLDS = [0, 150, 400, 700, 1000];
 
 const getLevel = (score) => {
   let lv = 1;
-  while (score >= getLevelThreshold(lv + 1)) lv++;
+  for (let i = 1; i < LEVEL_THRESHOLDS.length; i++) {
+    if (score >= LEVEL_THRESHOLDS[i]) lv = i + 1;
+  }
   return lv;
 };
 
-// Customer request ranges based on level
+const getTheme = (lv) => LEVEL_THEMES[Math.min(lv - 1, LEVEL_THEMES.length - 1)];
+
+const getLevelName = (lv) => LEVEL_THEMES[Math.min(lv - 1, LEVEL_THEMES.length - 1)].name;
+
+// Lv1:2종, Lv2:4종, Lv3:6종, Lv4+:8종
+const FRUITS_BY_LEVEL = [
+  ['apple', 'strawberry'],
+  ['apple', 'strawberry', 'watermelon', 'peach'],
+  ['apple', 'strawberry', 'watermelon', 'peach', 'pear', 'grape'],
+  ['apple', 'strawberry', 'watermelon', 'peach', 'pear', 'grape', 'orange', 'pineapple'],
+  ['apple', 'strawberry', 'watermelon', 'peach', 'pear', 'grape', 'orange', 'pineapple'],
+];
+
+const getAvailableFruits = (score) => FRUITS_BY_LEVEL[Math.min(getLevel(score) - 1, FRUITS_BY_LEVEL.length - 1)];
+
+// Customer request ranges based on score
 const getCustomerRequestRange = (score) => {
-  const lv = getLevel(score);
-  const max = 9 + Math.floor((lv - 1) / 2);
-  return { min: 5, max };
+  if (score <= 150)  return { min: 5, max: 9 };
+  if (score <= 300)  return { min: 5, max: 12 };
+  if (score <= 500)  return { min: 5, max: 15 };
+  if (score <= 750)  return { min: 5, max: 17 };
+  if (score <= 999)  return { min: 5, max: 20 };
+  const extra = Math.floor((score - 1000) / 100) + 1;
+  return { min: 5, max: 20 + extra };
 };
 
 const generateCustomerRequest = (score) => {
@@ -244,7 +276,7 @@ export default function FruitBoxScreen({ onBackToStart, mapSize = DEFAULT_GRID_S
   const addTime = useCallback((bonusSeconds) => {
     const maxTime = getMaxTime();
     const currentTime = timeLeftRef.current;
-    const overflowScore = (currentTime + bonusSeconds) > maxTime ? Math.floor((currentTime + bonusSeconds - maxTime) * 10) : 0;
+    const overflowScore = (currentTime + bonusSeconds) > maxTime ? Math.floor((currentTime + bonusSeconds - maxTime) * 5) : 0;
     const actualBonus = Math.round(Math.min(bonusSeconds, maxTime - currentTime));
     
     timeLeftRef.current = Math.min(maxTime, currentTime + bonusSeconds);
@@ -413,8 +445,7 @@ export default function FruitBoxScreen({ onBackToStart, mapSize = DEFAULT_GRID_S
 
   const removeApples = useCallback((minRow, maxRow, minCol, maxCol) => {
     const count = (maxRow - minRow + 1) * (maxCol - minCol + 1);
-    const level = getLevel(score);
-    const points = level + count;
+    const points = count * 5;
     const timeBonus = count >= 4 ? 7 : count >= 3 ? 6 : 5;
     
     // Play delivery animation first
@@ -435,13 +466,12 @@ export default function FruitBoxScreen({ onBackToStart, mapSize = DEFAULT_GRID_S
       // Show combined score gain effect
       setShowScoreBonus({ amount: points + scoreBonus });
       // Generate new customer request based on new score
-      setCustomerRequest(generateCustomerRequest(newScore));
+      const newCustomerRequest = generateCustomerRequest(newScore);
+      setCustomerRequest(newCustomerRequest);
       const newSeed = Math.floor(Math.random() * 20);
       setCustomerImgSeed(newSeed);
       const newLevel = getLevel(newScore);
-      const c5Threshold = newLevel >= 18 ? 8 : newLevel >= 15 ? 6 : newLevel >= 10 ? 4 : 0;
-      const isC5 = newSeed < c5Threshold;
-      setC5Condition(isC5 ? generateC5Condition(board) : null);
+      setC5Condition(newCustomerRequest >= 21 ? generateC5Condition(board) : null);
       customerSlideX.value = 200;
       customerSlideOpacity.value = 0;
       customerSlideX.value = withSpring(0, { damping: 18, stiffness: 120 });
@@ -450,6 +480,9 @@ export default function FruitBoxScreen({ onBackToStart, mapSize = DEFAULT_GRID_S
       // Level up check
       if (newLevel > prevLevelRef.current) {
         prevLevelRef.current = newLevel;
+        const { max: lvUpMax } = getCustomerRequestRange(newScore);
+        setCustomerRequest(lvUpMax);
+        setC5Condition(lvUpMax >= 21 ? generateC5Condition(board) : null);
         setShowLevelUp(true);
         setChance(1);
         chanceUsedRef.current = false;
@@ -501,7 +534,7 @@ export default function FruitBoxScreen({ onBackToStart, mapSize = DEFAULT_GRID_S
           for (let r = 0; r <= writeRow; r++) {
             newBoard[r][c] = { 
               value: getNextNumber(customerRequest), 
-              fruit: FRUITS[Math.floor(Math.random() * FRUITS.length)],
+              fruit: getAvailableFruits(score)[Math.floor(Math.random() * getAvailableFruits(score).length)],
               removed: false 
             };
             const dropDist = (writeRow + 1) * (CELL_SIZE + CELL_MARGIN * 2);
@@ -634,15 +667,17 @@ export default function FruitBoxScreen({ onBackToStart, mapSize = DEFAULT_GRID_S
     ],
   }));
 
+  const theme = getTheme(getLevel(score));
+
   return (
-    <View style={styles.container}>
+    <View style={[styles.container, { backgroundColor: theme.bg }]}>
       <View style={styles.header}>
         <TouchableOpacity style={styles.backBtn} onPress={onBackToStart}>
           <Svg width={28} height={28} viewBox="0 0 28 28">
             <Path d="M18 5 L9 14 L18 23" stroke="#8B7355" strokeWidth="2.8" strokeLinecap="round" strokeLinejoin="round" fill="none" />
           </Svg>
         </TouchableOpacity>
-        {/* <TouchableOpacity style={styles.resetBtn} onPress={() => setPaused(p => !p)}><Text style={styles.resetIcon}>{paused ? '▶' : '⏸'}</Text></TouchableOpacity> */}
+        <TouchableOpacity style={styles.resetBtn} onPress={() => setPaused(p => !p)}><Text style={styles.resetIcon}>{paused ? '▶' : '⏸'}</Text></TouchableOpacity>
       </View>
 
       {/* Score + Level Row */}
@@ -683,7 +718,7 @@ export default function FruitBoxScreen({ onBackToStart, mapSize = DEFAULT_GRID_S
         {/* Customer (Right) */}
         <View style={styles.characterWrapper}>
           <Animated.View style={[styles.characterEmojiWrapper, customerSlideStyle]}>
-            <Image source={getCustomerImg(customerRequest, customerImgSeed, c5Condition !== null)} style={customerRequest <= 9 ? styles.customerImageSmall : styles.customerImage} resizeMode="contain" />
+            <Image source={getCustomerImg(customerRequest, customerImgSeed)} style={customerRequest <= 9 ? styles.customerImageSmall : styles.customerImage} resizeMode="contain" />
             <View style={[styles.svgBubbleContainer, c5Condition && styles.svgBubbleContainerLarge]}>
               {Platform.OS === 'web' ? (
                 <img
@@ -784,6 +819,8 @@ export default function FruitBoxScreen({ onBackToStart, mapSize = DEFAULT_GRID_S
                   anims={cellAnims[rowIndex][colIndex]}
                   isSelected={isInSelection(rowIndex, colIndex)}
                   cellSize={CELL_SIZE}
+                  blockFill={theme.blockFill}
+                  blockStroke={theme.blockStroke}
                 />
               ))}
             </View>
@@ -858,7 +895,7 @@ const timerStyles = StyleSheet.create({
   },
 });
 
-function Cell({ cell, anims, isSelected, cellSize }) {
+function Cell({ cell, anims, isSelected, cellSize, blockFill, blockStroke }) {
   const animatedStyle = useAnimatedStyle(() => ({
     opacity: anims.opacity.value,
     transform: [
@@ -870,7 +907,7 @@ function Cell({ cell, anims, isSelected, cellSize }) {
   }));
 
   const appleFontSize = Math.floor(cellSize * 0.55);
-  const numberFontSize = Math.floor(cellSize * 0.32);
+  const numberFontSize = Math.floor(cellSize * 0.40);
 
   return (
     <Animated.View style={[styles.cellContainer, { width: cellSize, height: cellSize }, animatedStyle]}>
@@ -881,6 +918,8 @@ function Cell({ cell, anims, isSelected, cellSize }) {
             fruit={cell.fruit || FRUITS[0]} 
             selected={isSelected}
             style={styles.cellBackground}
+            blockFill={blockFill}
+            blockStroke={blockStroke}
           />
           <View style={styles.cellContent}>
             {(() => {
@@ -897,7 +936,7 @@ function Cell({ cell, anims, isSelected, cellSize }) {
                 default: return <AppleIcon size={iconSize} />;
               }
             })()}
-            <Text style={[styles.number, { fontSize: numberFontSize }]}>{cell.value}</Text>
+            <Text style={[styles.number, { fontSize: numberFontSize, lineHeight: numberFontSize * 1.2 }]}>{cell.value}</Text>
           </View>
         </>
       )}
@@ -1066,10 +1105,10 @@ const styles = StyleSheet.create({
   number: { 
     position: 'absolute', 
     fontSize: 16, 
-    fontWeight: 'bold', 
+    fontWeight: '900', 
     color: '#FFF',
-    textShadowColor: '#000',
-    textShadowOffset: { width: 0, height: 0 },
-    textShadowRadius: 3,
+    textShadowColor: 'rgba(0,0,0,0.8)',
+    textShadowOffset: { width: 0, height: 1 },
+    textShadowRadius: 6,
   },
 });
