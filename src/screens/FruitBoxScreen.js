@@ -677,7 +677,7 @@ export default function FruitBoxScreen({ onBackToStart, mapSize = DEFAULT_GRID_S
             <Path d="M18 5 L9 14 L18 23" stroke="#8B7355" strokeWidth="2.8" strokeLinecap="round" strokeLinejoin="round" fill="none" />
           </Svg>
         </TouchableOpacity>
-        <TouchableOpacity style={styles.resetBtn} onPress={() => setPaused(p => !p)}><Text style={styles.resetIcon}>{paused ? '▶' : '⏸'}</Text></TouchableOpacity>
+        {/* <TouchableOpacity style={styles.resetBtn} onPress={() => setPaused(p => !p)}><Text style={styles.resetIcon}>{paused ? '▶' : '⏸'}</Text></TouchableOpacity> */}
       </View>
 
       {/* Score + Level Row */}
