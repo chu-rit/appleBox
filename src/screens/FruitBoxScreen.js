@@ -7,6 +7,8 @@ import {
   Platform,
   TouchableOpacity,
   Image,
+  TextInput,
+  Modal,
 } from 'react-native';
 import { Gesture, GestureDetector, GestureHandlerRootView } from 'react-native-gesture-handler';
 import Animated, {
@@ -25,6 +27,7 @@ import StrawberryIcon from '../assets/icons/StrawberryIcon';
 import PeachIcon from '../assets/icons/PeachIcon';
 import PineappleIcon from '../assets/icons/PineappleIcon';
 import FruitBlock from '../assets/icons/FruitBlock';
+import { saveRanking } from '../services/rankingService';
 
 const workerImg = require('../assets/img/S1.png');
 const workerImgDelivery = require('../assets/img/S2.png');
@@ -199,6 +202,8 @@ export default function FruitBoxScreen({ onBackToStart, mapSize = DEFAULT_GRID_S
   const [showScoreBonus, setShowScoreBonus] = useState(null); // { amount: number }
   const [showLevelUp, setShowLevelUp] = useState(false);
   const [paused, setPaused] = useState(false);
+  const [showGameOverModal, setShowGameOverModal] = useState(false);
+  const [playerName, setPlayerName] = useState('');
   const prevLevelRef = useRef(1);
   const [chance, setChance] = useState(1);
   const [hintCells, setHintCells] = useState(null); // { r1, c1, r2, c2 }
@@ -253,6 +258,7 @@ export default function FruitBoxScreen({ onBackToStart, mapSize = DEFAULT_GRID_S
       setTimeLeft(prev => {
         if (prev <= 0.1) {
           setGameOver(true);
+          setShowGameOverModal(true);
           return 0;
         }
         const next = Math.max(0, prev - 0.1);
@@ -294,6 +300,15 @@ export default function FruitBoxScreen({ onBackToStart, mapSize = DEFAULT_GRID_S
     
     return overflowScore;
   }, [timerBarFlash]);
+
+  const handleSaveScore = async () => {
+    if (playerName.trim() === '') return;
+    const result = await saveRanking(playerName, score, getLevel(score), GRID_SIZE);
+    if (result.success) {
+      setShowGameOverModal(false);
+      setPlayerName('');
+    }
+  };
   
   useEffect(() => {
     const preventContextMenu = (e) => {
@@ -685,7 +700,7 @@ export default function FruitBoxScreen({ onBackToStart, mapSize = DEFAULT_GRID_S
         <View style={styles.scoreRow}>
           <View style={styles.levelBox}>
             <Text style={styles.levelLabel}>LEVEL</Text>
-            <Text style={styles.levelValue}>{getLevel(score)}</Text>
+            <Text style={styles.levelValue}>{getLevel(score) >= 5 ? 'MAX' : getLevel(score)}</Text>
           </View>
           <TouchableOpacity style={styles.scoreBox} onPress={handlePossibleTap}>
             <Text style={styles.scoreLabel}>SCORE</Text>
@@ -704,7 +719,7 @@ export default function FruitBoxScreen({ onBackToStart, mapSize = DEFAULT_GRID_S
       {/* Level Up Banner */}
       {showLevelUp && (
         <Animated.View style={[styles.levelUpBanner, levelUpAnimStyle]}>
-          <Text style={styles.levelUpBannerText}>⭐ LEVEL UP! Lv.{getLevel(score)}</Text>
+          <Text style={styles.levelUpBannerText}>⭐ LEVEL UP! Lv.{getLevel(score) >= 5 ? 'MAX' : getLevel(score)}</Text>
         </Animated.View>
       )}
 
@@ -828,6 +843,31 @@ export default function FruitBoxScreen({ onBackToStart, mapSize = DEFAULT_GRID_S
           </View>
         </GestureDetector>
       </GestureHandlerRootView>
+
+      {/* Game Over Modal */}
+      <Modal visible={showGameOverModal} transparent animationType="fade">
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContent}>
+            <Text style={styles.modalTitle}>GAME OVER</Text>
+            <Text style={styles.modalScore}>Score: {score}</Text>
+            <Text style={styles.modalLevel}>Level: {getLevel(score)}</Text>
+            <TextInput
+              style={styles.modalInput}
+              placeholder="Enter your name"
+              placeholderTextColor="#999"
+              value={playerName}
+              onChangeText={setPlayerName}
+              maxLength={20}
+            />
+            <TouchableOpacity style={styles.modalButton} onPress={handleSaveScore}>
+              <Text style={styles.modalButtonText}>Save Score</Text>
+            </TouchableOpacity>
+            <TouchableOpacity style={styles.modalSkipButton} onPress={() => { setShowGameOverModal(false); setPlayerName(''); }}>
+              <Text style={styles.modalSkipButtonText}>Skip</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
     </View>
   );
 }
@@ -1070,6 +1110,71 @@ const styles = StyleSheet.create({
     borderBottomColor: 'transparent',
     borderRightWidth: 10,
     borderRightColor: '#FF6B42',
+  },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.7)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  modalContent: {
+    backgroundColor: '#FFF8E7',
+    borderRadius: 20,
+    padding: 30,
+    width: '80%',
+    maxWidth: 320,
+    alignItems: 'center',
+  },
+  modalTitle: {
+    fontSize: 28,
+    fontWeight: '900',
+    color: '#FF8C42',
+    marginBottom: 16,
+  },
+  modalScore: {
+    fontSize: 20,
+    fontWeight: '700',
+    color: '#8B7355',
+    marginBottom: 8,
+  },
+  modalLevel: {
+    fontSize: 18,
+    fontWeight: '600',
+    color: '#8B7355',
+    marginBottom: 20,
+  },
+  modalInput: {
+    width: '100%',
+    height: 48,
+    backgroundColor: '#FFF',
+    borderRadius: 10,
+    paddingHorizontal: 16,
+    fontSize: 16,
+    color: '#333',
+    marginBottom: 16,
+    borderWidth: 2,
+    borderColor: '#E0E0E0',
+  },
+  modalButton: {
+    width: '100%',
+    backgroundColor: '#FF8C42',
+    paddingVertical: 14,
+    borderRadius: 10,
+    alignItems: 'center',
+    marginBottom: 8,
+  },
+  modalButtonText: {
+    color: '#FFF',
+    fontSize: 16,
+    fontWeight: '700',
+  },
+  modalSkipButton: {
+    paddingVertical: 8,
+  },
+  modalSkipButtonText: {
+    color: '#8B7355',
+    fontSize: 14,
+    fontWeight: '600',
   },
   
   // Delivery Animation

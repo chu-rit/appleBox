@@ -1,15 +1,47 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
   StyleSheet,
   TouchableOpacity,
   Dimensions,
+  ScrollView,
+  ActivityIndicator,
 } from 'react-native';
+import { getRankings } from '../services/rankingService';
 
 const { width, height } = Dimensions.get('window');
 
 export default function RankingScreen({ onBack }) {
+  const [rankings, setRankings] = useState([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    loadRankings();
+  }, []);
+
+  const loadRankings = async () => {
+    setLoading(true);
+    const result = await getRankings(50);
+    if (result.success) {
+      setRankings(result.rankings);
+    }
+    setLoading(false);
+  };
+
+  const formatDate = (timestamp) => {
+    if (!timestamp) return '';
+    const date = timestamp.toDate ? timestamp.toDate() : new Date(timestamp);
+    return date.toLocaleDateString('ko-KR');
+  };
+
+  const getRankBadge = (rank) => {
+    if (rank === 1) return '🥇';
+    if (rank === 2) return '🥈';
+    if (rank === 3) return '🥉';
+    return `#${rank}`;
+  };
+
   return (
     <View style={styles.container}>
       {/* Header */}
@@ -21,23 +53,40 @@ export default function RankingScreen({ onBack }) {
         <View style={styles.placeholder} />
       </View>
 
-      {/* Coming Soon Message */}
-      <View style={styles.content}>
-        <View style={styles.iconContainer}>
-          <Text style={styles.icon}>🏆</Text>
+      {/* Rankings List */}
+      {loading ? (
+        <View style={styles.content}>
+          <ActivityIndicator size="large" color="#FF8C42" />
         </View>
-        <Text style={styles.message}>Coming Soon</Text>
-        <Text style={styles.subMessage}>
-          This feature will be implemented in the official release.
-        </Text>
-      </View>
-
-      {/* Back Button */}
-      <View style={styles.buttonContainer}>
-        <TouchableOpacity style={styles.button} onPress={onBack}>
-          <Text style={styles.buttonText}>BACK TO MENU</Text>
-        </TouchableOpacity>
-      </View>
+      ) : rankings.length === 0 ? (
+        <View style={styles.content}>
+          <View style={styles.iconContainer}>
+            <Text style={styles.icon}>🏆</Text>
+          </View>
+          <Text style={styles.message}>No rankings yet</Text>
+          <Text style={styles.subMessage}>
+            Be the first to set a record!
+          </Text>
+        </View>
+      ) : (
+        <ScrollView style={styles.scrollContent} contentContainerStyle={styles.scrollContentContainer}>
+          {rankings.map((item, index) => (
+            <View key={item.id} style={styles.rankItem}>
+              <View style={styles.rankBadge}>
+                <Text style={styles.rankBadgeText}>{getRankBadge(index + 1)}</Text>
+              </View>
+              <View style={styles.rankInfo}>
+                <Text style={styles.rankName}>{item.name}</Text>
+                <Text style={styles.rankDate}>{formatDate(item.createdAt)}</Text>
+              </View>
+              <View style={styles.rankScoreBox}>
+                <Text style={styles.rankScore}>{item.score}</Text>
+                <Text style={styles.rankLevel}>Lv.{item.level}</Text>
+              </View>
+            </View>
+          ))}
+        </ScrollView>
+      )}
 
       {/* Footer */}
       <View style={styles.footer}>
@@ -63,7 +112,7 @@ const styles = StyleSheet.create({
   backButton: {
     width: 40,
     height: 40,
-    backgroundColor: '#FF4444',
+    backgroundColor: '#FF8C42',
     borderRadius: 20,
     justifyContent: 'center',
     alignItems: 'center',
@@ -76,7 +125,7 @@ const styles = StyleSheet.create({
   title: {
     fontSize: 24,
     fontWeight: '900',
-    color: '#FF4444',
+    color: '#FF8C42',
     letterSpacing: 2,
   },
   placeholder: {
@@ -117,26 +166,60 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     lineHeight: 24,
   },
-  buttonContainer: {
-    paddingHorizontal: 40,
-    paddingBottom: height * 0.15,
+  scrollContent: {
+    flex: 1,
   },
-  button: {
-    backgroundColor: '#FF4444',
-    paddingVertical: 18,
-    borderRadius: 15,
+  scrollContentContainer: {
+    paddingHorizontal: 20,
+    paddingBottom: 60,
+  },
+  rankItem: {
+    flexDirection: 'row',
     alignItems: 'center',
-    shadowColor: '#FF4444',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
-    shadowRadius: 8,
-    elevation: 5,
+    backgroundColor: '#FFF',
+    borderRadius: 12,
+    padding: 16,
+    marginBottom: 10,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 3,
   },
-  buttonText: {
-    color: '#FFF',
-    fontSize: 18,
+  rankBadge: {
+    width: 50,
+    alignItems: 'center',
+  },
+  rankBadgeText: {
+    fontSize: 20,
+    fontWeight: '900',
+  },
+  rankInfo: {
+    flex: 1,
+    marginLeft: 12,
+  },
+  rankName: {
+    fontSize: 16,
     fontWeight: '700',
-    letterSpacing: 1,
+    color: '#333',
+    marginBottom: 4,
+  },
+  rankDate: {
+    fontSize: 12,
+    color: '#8B7355',
+  },
+  rankScoreBox: {
+    alignItems: 'flex-end',
+  },
+  rankScore: {
+    fontSize: 20,
+    fontWeight: '900',
+    color: '#FF8C42',
+  },
+  rankLevel: {
+    fontSize: 12,
+    color: '#8B7355',
+    marginTop: 2,
   },
   footer: {
     position: 'absolute',
