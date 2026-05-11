@@ -4,10 +4,15 @@ import { Platform } from 'react-native';
 let RewardedAd, RewardedAdEventType, TestIds;
 
 if (Platform.OS !== 'web') {
-  const ads = require('react-native-google-mobile-ads');
-  RewardedAd = ads.RewardedAd;
-  RewardedAdEventType = ads.RewardedAdEventType;
-  TestIds = ads.TestIds;
+  try {
+    const ads = require('react-native-google-mobile-ads');
+    RewardedAd = ads.RewardedAd;
+    RewardedAdEventType = ads.RewardedAdEventType;
+    TestIds = ads.TestIds;
+  } catch (e) {
+    // 패키지가 없으면 스킵
+    console.log('react-native-google-mobile-ads not installed');
+  }
 }
 
 // 테스트용 광고 단위 ID
