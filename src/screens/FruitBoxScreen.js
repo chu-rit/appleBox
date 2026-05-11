@@ -28,6 +28,7 @@ import PeachIcon from '../assets/icons/PeachIcon';
 import PineappleIcon from '../assets/icons/PineappleIcon';
 import FruitBlock from '../assets/icons/FruitBlock';
 import { saveRanking } from '../services/rankingService';
+import { showRewardedAdOrSkip } from '../services/adService';
 
 const workerImg = require('../assets/img/S1.png');
 const workerImgDelivery = require('../assets/img/S2.png');
@@ -258,7 +259,10 @@ export default function FruitBoxScreen({ onBackToStart, mapSize = DEFAULT_GRID_S
       setTimeLeft(prev => {
         if (prev <= 0.1) {
           setGameOver(true);
-          setShowGameOverModal(true);
+          // 광고 표시 후 랭킹 등록 모달 표시
+          showRewardedAdOrSkip().then(() => {
+            setShowGameOverModal(true);
+          });
           return 0;
         }
         const next = Math.max(0, prev - 0.1);

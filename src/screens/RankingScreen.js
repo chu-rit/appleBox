@@ -8,21 +8,25 @@ import {
   ScrollView,
   ActivityIndicator,
 } from 'react-native';
-import { getRankings } from '../services/rankingService';
+import Svg, { Path } from 'react-native-svg';
+import { getRankings, getWeeklyRankings } from '../services/rankingService';
 
 const { width, height } = Dimensions.get('window');
 
 export default function RankingScreen({ onBack }) {
   const [rankings, setRankings] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [activeTab, setActiveTab] = useState('weekly'); // 'all' or 'weekly'
 
   useEffect(() => {
     loadRankings();
-  }, []);
+  }, [activeTab]);
 
   const loadRankings = async () => {
     setLoading(true);
-    const result = await getRankings(50);
+    const result = activeTab === 'all' 
+      ? await getRankings(50)
+      : await getWeeklyRankings(50);
     if (result.success) {
       setRankings(result.rankings);
     }
@@ -47,10 +51,28 @@ export default function RankingScreen({ onBack }) {
       {/* Header */}
       <View style={styles.header}>
         <TouchableOpacity style={styles.backButton} onPress={onBack}>
-          <Text style={styles.backText}>←</Text>
+          <Svg width={28} height={28} viewBox="0 0 28 28">
+            <Path d="M18 5 L9 14 L18 23" stroke="#8B7355" strokeWidth="2.8" strokeLinecap="round" strokeLinejoin="round" fill="none" />
+          </Svg>
         </TouchableOpacity>
         <Text style={styles.title}>RANKING</Text>
         <View style={styles.placeholder} />
+      </View>
+
+      {/* Tabs */}
+      <View style={styles.tabContainer}>
+        <TouchableOpacity
+          style={[styles.tab, activeTab === 'weekly' && styles.tabActive]}
+          onPress={() => setActiveTab('weekly')}
+        >
+          <Text style={[styles.tabText, activeTab === 'weekly' && styles.tabTextActive]}>Weekly Top</Text>
+        </TouchableOpacity>
+        <TouchableOpacity
+          style={[styles.tab, activeTab === 'all' && styles.tabActive]}
+          onPress={() => setActiveTab('all')}
+        >
+          <Text style={[styles.tabText, activeTab === 'all' && styles.tabTextActive]}>Global Top</Text>
+        </TouchableOpacity>
       </View>
 
       {/* Rankings List */}
@@ -112,15 +134,10 @@ const styles = StyleSheet.create({
   backButton: {
     width: 40,
     height: 40,
-    backgroundColor: '#FF8C42',
-    borderRadius: 20,
+    backgroundColor: 'rgba(139,115,85,0.12)',
+    borderRadius: 12,
     justifyContent: 'center',
     alignItems: 'center',
-  },
-  backText: {
-    color: '#FFF',
-    fontSize: 20,
-    fontWeight: 'bold',
   },
   title: {
     fontSize: 24,
@@ -130,6 +147,31 @@ const styles = StyleSheet.create({
   },
   placeholder: {
     width: 40,
+  },
+  tabContainer: {
+    flexDirection: 'row',
+    paddingHorizontal: 20,
+    paddingVertical: 10,
+    backgroundColor: '#FFF8E7',
+  },
+  tab: {
+    flex: 1,
+    paddingVertical: 12,
+    borderRadius: 10,
+    alignItems: 'center',
+    backgroundColor: '#FFF',
+    marginHorizontal: 5,
+  },
+  tabActive: {
+    backgroundColor: '#FF8C42',
+  },
+  tabText: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: '#8B7355',
+  },
+  tabTextActive: {
+    color: '#FFF',
   },
   content: {
     flex: 1,
