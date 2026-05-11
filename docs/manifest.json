@@ -1,0 +1,29 @@
+{
+  "name": "Fruit Box",
+  "short_name": "FruitBox",
+  "description": "Collect & Stack fruits!",
+  "start_url": "/appleBox/",
+  "display": "standalone",
+  "background_color": "#FFF8E7",
+  "theme_color": "#FF4444",
+  "orientation": "portrait",
+  "icons": [
+    {
+      "src": "/appleBox/favicon.ico",
+      "sizes": "48x48",
+      "type": "image/x-icon"
+    },
+    {
+      "src": "/appleBox/assets/icon.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/appleBox/assets/icon.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ]
+}
