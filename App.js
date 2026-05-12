@@ -1,13 +1,25 @@
 import { StatusBar } from 'expo-status-bar';
 import { StyleSheet, View, Platform } from 'react-native';
 import { useEffect } from 'react';
+import { Asset } from 'expo-asset';
 import Game from './src/Game';
 import { preloadSFX } from './src/services/sfxService';
+
+const PRELOAD_IMAGES = [
+  require('./src/assets/img/S1.png'),
+  require('./src/assets/img/S2.png'),
+  require('./src/assets/img/C1.png'),
+  require('./src/assets/img/C2.png'),
+  require('./src/assets/img/C3.png'),
+  require('./src/assets/img/C4.png'),
+  require('./src/assets/img/C5.png'),
+];
 
 export default function App() {
   // Inject web CSS to prevent text selection and context menu
   useEffect(() => {
     preloadSFX();
+    Asset.loadAsync(PRELOAD_IMAGES).catch(() => {});
   }, []);
 
   useEffect(() => {
