@@ -30,6 +30,7 @@ import FruitBlock from '../assets/icons/FruitBlock';
 import { saveRanking } from '../services/rankingService';
 import { showRewardedAdOrSkip } from '../services/adService';
 import { startBGM, stopBGM, pauseBGM, resumeBGM, setBGMRateByTime } from '../services/musicService';
+import { playStartSFX, playTradeSFX } from '../services/sfxService';
 
 const workerImg = require('../assets/img/S1.png');
 const workerImgDelivery = require('../assets/img/S2.png');
@@ -251,6 +252,7 @@ export default function FruitBoxScreen({ onBackToStart, mapSize = DEFAULT_GRID_S
   
   // BGM 관리 - StartScreen의 START 버튼 클릭 시 이미 startBGM 호출됨
   useEffect(() => {
+    playStartSFX();
     startBGM();
     return () => { stopBGM(); };
   }, []);
@@ -490,6 +492,7 @@ export default function FruitBoxScreen({ onBackToStart, mapSize = DEFAULT_GRID_S
     
     // Play delivery animation first
     playDeliveryAnimation();
+    playTradeSFX();
     const scoreBonus = addTime(timeBonus);
     const newScore = score + points + scoreBonus;
     

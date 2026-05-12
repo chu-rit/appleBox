@@ -1,6 +1,8 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { StyleSheet, View } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { setBGMEnabled } from './services/musicService';
+import { setSFXEnabled } from './services/sfxService';
 import StartScreen from './screens/StartScreen';
 import GameScreen from './screens/GameScreen';
 import SettingsScreen from './screens/SettingsScreen';
@@ -14,33 +16,33 @@ export default function Game() {
   const [tick, setTick] = useState(0);
   const [mapSize, setMapSize] = useState(6); // 5~8 configurable
   const [gameMode, setGameMode] = useState('fruit'); // 'apple' or 'fruit'
+  const [bgmOn, setBgmOn] = useState(true);
+  const [sfxOn, setSfxOn] = useState(true);
+  const settingsLoaded = useRef(false);
 
-  // Load saved mapSize on mount
+  // Load saved settings on mount
   useEffect(() => {
     const loadSettings = async () => {
       try {
         const savedMapSize = await AsyncStorage.getItem('mapSize');
-        if (savedMapSize !== null) {
-          setMapSize(parseInt(savedMapSize, 10));
-        }
-      } catch (e) {
-        console.error('Failed to load settings:', e);
-      }
+        if (savedMapSize !== null) setMapSize(parseInt(savedMapSize, 10));
+        const savedBgm = await AsyncStorage.getItem('bgmOn');
+        if (savedBgm !== null) { const v = savedBgm === 'true'; setBgmOn(v); setBGMEnabled(v); }
+        const savedSfx = await AsyncStorage.getItem('sfxOn');
+        if (savedSfx !== null) { const v = savedSfx === 'true'; setSfxOn(v); setSFXEnabled(v); }
+      } catch (e) {}
+      settingsLoaded.current = true;
     };
     loadSettings();
   }, []);
 
-  // Save mapSize when changed
-  useEffect(() => {
-    const saveSettings = async () => {
-      try {
-        await AsyncStorage.setItem('mapSize', mapSize.toString());
-      } catch (e) {
-        console.error('Failed to save settings:', e);
-      }
-    };
-    saveSettings();
-  }, [mapSize]);
+  // Save settings when changed (skip initial mount before load completes)
+  useEffect(() => { if (settingsLoaded.current) AsyncStorage.setItem('mapSize', mapSize.toString()).catch(() => {}); }, [mapSize]);
+  useEffect(() => { if (settingsLoaded.current) AsyncStorage.setItem('bgmOn', bgmOn.toString()).catch(() => {}); }, [bgmOn]);
+  useEffect(() => { if (settingsLoaded.current) AsyncStorage.setItem('sfxOn', sfxOn.toString()).catch(() => {}); }, [sfxOn]);
+
+  const handleBgmToggle = (v) => { setBgmOn(v); setBGMEnabled(v); };
+  const handleSfxToggle = (v) => { setSfxOn(v); setSFXEnabled(v); };
 
   // TODO: Add your game state refs here
 
@@ -118,6 +120,10 @@ export default function Game() {
             onBack={backToStart}
             mapSize={mapSize}
             onChangeMapSize={setMapSize}
+            bgmOn={bgmOn}
+            sfxOn={sfxOn}
+            onBgmToggle={handleBgmToggle}
+            onSfxToggle={handleSfxToggle}
           />
         );
       default:

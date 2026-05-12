@@ -1,10 +1,12 @@
-import React from 'react';
+import React, { useState } from 'react';
 import {
   View,
   Text,
   StyleSheet,
   TouchableOpacity,
   Dimensions,
+  Modal,
+  Linking,
 } from 'react-native';
 import AppleIcon from '../assets/icons/AppleIcon';
 import OrangeIcon from '../assets/icons/OrangeIcon';
@@ -16,6 +18,7 @@ import PeachIcon from '../assets/icons/PeachIcon';
 import PineappleIcon from '../assets/icons/PineappleIcon';
 import FruitBoxLogo from '../assets/icons/FruitBoxLogo';
 import { startBGM } from '../services/musicService';
+import { playStartSFX } from '../services/sfxService';
 
 const { width, height } = Dimensions.get('window');
 
@@ -34,6 +37,7 @@ const BG_FRUITS = [
 
 export default function StartScreen({ onStart, onSettings, onRanking, onLogoPress, gameMode = 'apple' }) {
   const isFruitMode = gameMode === 'fruit';
+  const [showCredits, setShowCredits] = useState(false);
 
   return (
     <View style={[styles.container, isFruitMode && styles.containerFruit]}>
@@ -67,15 +71,15 @@ export default function StartScreen({ onStart, onSettings, onRanking, onLogoPres
 
       {/* Menu Buttons */}
       <View style={styles.menuContainer}>
-        <TouchableOpacity style={[styles.button, isFruitMode && styles.buttonFruit]} onPress={() => { startBGM(); onStart(); }}>
+        <TouchableOpacity style={[styles.button, isFruitMode && styles.buttonFruit]} onPress={() => { playStartSFX(); startBGM(); onStart(); }}>
           <Text style={styles.buttonText}>▶  START GAME</Text>
         </TouchableOpacity>
 
-        <TouchableOpacity style={[styles.buttonSecondary, isFruitMode && styles.buttonSecondaryFruit]} onPress={onRanking}>
+        <TouchableOpacity style={[styles.buttonSecondary, isFruitMode && styles.buttonSecondaryFruit]} onPress={() => { playStartSFX(); onRanking(); }}>
           <Text style={[styles.buttonSecondaryText, isFruitMode && styles.buttonSecondaryTextFruit]}>🏆  RANKING</Text>
         </TouchableOpacity>
 
-        <TouchableOpacity style={[styles.buttonSecondary, isFruitMode && styles.buttonSecondaryFruit]} onPress={onSettings}>
+        <TouchableOpacity style={[styles.buttonSecondary, isFruitMode && styles.buttonSecondaryFruit]} onPress={() => { playStartSFX(); onSettings(); }}>
           <Text style={[styles.buttonSecondaryText, isFruitMode && styles.buttonSecondaryTextFruit]}>⚙  SETTINGS</Text>
         </TouchableOpacity>
       </View>
@@ -83,7 +87,36 @@ export default function StartScreen({ onStart, onSettings, onRanking, onLogoPres
       {/* Footer */}
       <View style={styles.footer}>
         <Text style={styles.version}>v1.1.0</Text>
+        <TouchableOpacity onPress={() => setShowCredits(true)} style={styles.creditsBtn}>
+          <Text style={styles.creditsText}>Credits</Text>
+        </TouchableOpacity>
       </View>
+
+      {/* Credits Modal */}
+      <Modal transparent visible={showCredits} animationType="fade" onRequestClose={() => setShowCredits(false)}>
+        <TouchableOpacity style={styles.modalOverlay} activeOpacity={1} onPress={() => setShowCredits(false)}>
+          <View style={styles.modalBox}>
+            <Text style={styles.modalTitle}>Credits</Text>
+            <Text style={styles.modalBody}>Music by Clement Panchout</Text>
+            <Text
+              style={styles.modalLink}
+              onPress={() => Linking.openURL('http://www.clementpanchout.com')}
+            >
+              www.clementpanchout.com
+            </Text>
+            <Text style={styles.modalBody}>SFX by KronBits</Text>
+            <Text
+              style={styles.modalLink}
+              onPress={() => Linking.openURL('https://kronbits.itch.io/freesfx')}
+            >
+              kronbits.itch.io/freesfx
+            </Text>
+            <TouchableOpacity onPress={() => setShowCredits(false)} style={styles.modalClose}>
+              <Text style={styles.modalCloseText}>Close</Text>
+            </TouchableOpacity>
+          </View>
+        </TouchableOpacity>
+      </Modal>
     </View>
   );
 }
@@ -188,5 +221,59 @@ const styles = StyleSheet.create({
     fontSize: 12,
     color: '#8B7355',
     opacity: 0.5,
+  },
+  creditsBtn: {
+    marginTop: 6,
+  },
+  creditsText: {
+    fontSize: 12,
+    color: '#8B7355',
+    opacity: 0.6,
+    textDecorationLine: 'underline',
+  },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.45)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  modalBox: {
+    backgroundColor: '#FFF',
+    borderRadius: 20,
+    paddingVertical: 28,
+    paddingHorizontal: 32,
+    alignItems: 'center',
+    width: '80%',
+    gap: 8,
+  },
+  modalTitle: {
+    fontSize: 20,
+    fontWeight: '800',
+    color: '#FF4444',
+    marginBottom: 8,
+  },
+  modalBody: {
+    fontSize: 14,
+    color: '#5C4A2A',
+    textAlign: 'center',
+  },
+  modalLink: {
+    fontSize: 13,
+    color: '#FF8C42',
+    textDecorationLine: 'underline',
+    textAlign: 'center',
+    marginBottom: 6,
+  },
+  modalClose: {
+    marginTop: 14,
+    backgroundColor: '#FF4444',
+    paddingVertical: 10,
+    paddingHorizontal: 32,
+    borderRadius: 12,
+  },
+  modalCloseText: {
+    color: '#FFF',
+    fontWeight: '700',
+    fontSize: 15,
   },
 });

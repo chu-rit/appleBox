@@ -4,20 +4,25 @@ import {
   Text,
   StyleSheet,
   TouchableOpacity,
+  Switch,
   Dimensions,
 } from 'react-native';
+import { playStartSFX } from '../services/sfxService';
+import Svg, { Path } from 'react-native-svg';
 
 const { width, height } = Dimensions.get('window');
 
-export default function SettingsScreen({ onBack, mapSize, onChangeMapSize }) {
+export default function SettingsScreen({ onBack, mapSize, onChangeMapSize, bgmOn, sfxOn, onBgmToggle, onSfxToggle }) {
   const mapSizes = [5, 6, 7, 8];
 
   return (
     <View style={styles.container}>
       {/* Header */}
       <View style={styles.header}>
-        <TouchableOpacity style={styles.backButton} onPress={onBack}>
-          <Text style={styles.backText}>←</Text>
+        <TouchableOpacity style={styles.backBtn} onPress={() => { playStartSFX(); onBack(); }}>
+          <Svg width={28} height={28} viewBox="0 0 28 28">
+            <Path d="M18 5 L9 14 L18 23" stroke="#8B7355" strokeWidth="2.8" strokeLinecap="round" strokeLinejoin="round" fill="none" />
+          </Svg>
         </TouchableOpacity>
         <Text style={styles.title}>SETTINGS</Text>
         <View style={styles.placeholder} />
@@ -67,6 +72,30 @@ export default function SettingsScreen({ onBack, mapSize, onChangeMapSize }) {
         </View>
       </View>
 
+      {/* Sound Settings */}
+      <View style={styles.settingCard}>
+        <Text style={styles.settingLabel}>SOUND</Text>
+        <View style={styles.toggleRow}>
+          <Text style={styles.toggleLabel}>Background Music</Text>
+          <Switch
+            value={bgmOn}
+            onValueChange={onBgmToggle}
+            trackColor={{ false: '#DDD', true: '#FF4444' }}
+            thumbColor={'#FFF'}
+          />
+        </View>
+        <View style={styles.divider} />
+        <View style={styles.toggleRow}>
+          <Text style={styles.toggleLabel}>Sound Effects</Text>
+          <Switch
+            value={sfxOn}
+            onValueChange={onSfxToggle}
+            trackColor={{ false: '#DDD', true: '#FF4444' }}
+            thumbColor={'#FFF'}
+          />
+        </View>
+      </View>
+
       {/* Footer */}
       <View style={styles.footer}>
         <Text style={styles.version}>v1.0.0</Text>
@@ -88,18 +117,13 @@ const styles = StyleSheet.create({
     paddingTop: 40,
     paddingBottom: 20,
   },
-  backButton: {
+  backBtn: {
     width: 40,
     height: 40,
-    backgroundColor: '#FF4444',
-    borderRadius: 20,
+    backgroundColor: 'rgba(139,115,85,0.12)',
+    borderRadius: 12,
     justifyContent: 'center',
     alignItems: 'center',
-  },
-  backText: {
-    color: '#FFF',
-    fontSize: 20,
-    fontWeight: 'bold',
   },
   title: {
     fontSize: 24,
@@ -186,6 +210,22 @@ const styles = StyleSheet.create({
     backgroundColor: '#FF6B6B',
     margin: 2,
     borderRadius: 4,
+  },
+  toggleRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingVertical: 6,
+  },
+  toggleLabel: {
+    fontSize: 15,
+    color: '#5C4A2A',
+    fontWeight: '500',
+  },
+  divider: {
+    height: 1,
+    backgroundColor: '#F0F0F0',
+    marginVertical: 8,
   },
   footer: {
     position: 'absolute',

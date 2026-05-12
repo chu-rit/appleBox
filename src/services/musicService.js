@@ -2,6 +2,7 @@ import { Audio } from 'expo-av';
 
 let sound = null;
 let loading = false;
+let bgmEnabled = true;
 
 async function _load() {
   if (sound || loading) return;
@@ -25,13 +26,22 @@ async function _load() {
   }
 }
 
+export function setBGMEnabled(enabled) {
+  bgmEnabled = enabled;
+  if (enabled) {
+    resumeBGM();
+  } else {
+    pauseBGM();
+  }
+}
+
 // ── 공개 API ────────────────────────────────────────────────
 export async function startBGM() {
   await _load();
   if (!sound) return;
   try {
     const status = await sound.getStatusAsync();
-    if (status.isLoaded && !status.isPlaying) await sound.playAsync();
+    if (status.isLoaded && !status.isPlaying && bgmEnabled) await sound.playAsync();
   } catch (e) {
     console.log('[BGM] 재생 실패:', e);
   }

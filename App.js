@@ -2,9 +2,14 @@ import { StatusBar } from 'expo-status-bar';
 import { StyleSheet, View, Platform } from 'react-native';
 import { useEffect } from 'react';
 import Game from './src/Game';
+import { preloadSFX } from './src/services/sfxService';
 
 export default function App() {
   // Inject web CSS to prevent text selection and context menu
+  useEffect(() => {
+    preloadSFX();
+  }, []);
+
   useEffect(() => {
     if (Platform.OS === 'web') {
       const style = document.createElement('style');
