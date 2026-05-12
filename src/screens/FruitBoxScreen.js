@@ -188,7 +188,7 @@ export default function FruitBoxScreen({ onBackToStart, mapSize = DEFAULT_GRID_S
   const GRID_SIZE = mapSize;
   const CELL_SIZE = Math.floor((width - 40) / GRID_SIZE);
   
-  const [board, setBoard] = useState(() => generateBoard(0, GRID_SIZE, customerRequest));
+  const [board, setBoard] = useState(() => generateBoard(0, GRID_SIZE, generateCustomerRequest(0)));
   const [selection, setSelection] = useState(null);
   const [dragRect, setDragRect] = useState(null);
   const [isDragging, setIsDragging] = useState(false);
