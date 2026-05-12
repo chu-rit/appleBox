@@ -15,6 +15,7 @@ import WatermelonIcon from '../assets/icons/WatermelonIcon';
 import PeachIcon from '../assets/icons/PeachIcon';
 import PineappleIcon from '../assets/icons/PineappleIcon';
 import FruitBoxLogo from '../assets/icons/FruitBoxLogo';
+import { startBGM } from '../services/musicService';
 
 const { width, height } = Dimensions.get('window');
 
@@ -66,7 +67,7 @@ export default function StartScreen({ onStart, onSettings, onRanking, onLogoPres
 
       {/* Menu Buttons */}
       <View style={styles.menuContainer}>
-        <TouchableOpacity style={[styles.button, isFruitMode && styles.buttonFruit]} onPress={onStart}>
+        <TouchableOpacity style={[styles.button, isFruitMode && styles.buttonFruit]} onPress={() => { startBGM(); onStart(); }}>
           <Text style={styles.buttonText}>▶  START GAME</Text>
         </TouchableOpacity>
 

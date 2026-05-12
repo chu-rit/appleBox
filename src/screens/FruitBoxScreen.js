@@ -29,6 +29,7 @@ import PineappleIcon from '../assets/icons/PineappleIcon';
 import FruitBlock from '../assets/icons/FruitBlock';
 import { saveRanking } from '../services/rankingService';
 import { showRewardedAdOrSkip } from '../services/adService';
+import { startBGM, stopBGM, pauseBGM, resumeBGM, setBGMRateByTime } from '../services/musicService';
 
 const workerImg = require('../assets/img/S1.png');
 const workerImgDelivery = require('../assets/img/S2.png');
@@ -248,6 +249,26 @@ export default function FruitBoxScreen({ onBackToStart, mapSize = DEFAULT_GRID_S
     opacity: levelUpOpacity.value,
   }));
   
+  // BGM 관리 - StartScreen의 START 버튼 클릭 시 이미 startBGM 호출됨
+  useEffect(() => {
+    startBGM();
+    return () => { stopBGM(); };
+  }, []);
+
+  useEffect(() => {
+    if (paused) {
+      pauseBGM();
+    } else {
+      resumeBGM();
+    }
+  }, [gameOver, paused]);
+
+  useEffect(() => {
+    if (!paused && !gameOver) {
+      setBGMRateByTime(timeLeft);
+    }
+  }, [timeLeft]);
+
   // Timer
   useEffect(() => {
     if (gameOver || paused) {
@@ -878,7 +899,7 @@ export default function FruitBoxScreen({ onBackToStart, mapSize = DEFAULT_GRID_S
 
 function TimerBar({ timeLeft, maxTime, flashValue, showTimeBonus }) {
   const progress = timeLeft / maxTime;
-  const fillColor = progress > 0.5 ? '#4CAF50' : progress > 0.3 ? '#FF9800' : '#FF4444';
+  const fillColor = timeLeft > 9 ? '#4CAF50' : timeLeft > 5 ? '#FF9800' : '#FF4444';
   const secondsLeft = Math.ceil(timeLeft);
   
   const flashStyle = useAnimatedStyle(() => ({
