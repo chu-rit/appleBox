@@ -1,9 +1,13 @@
 import { Platform } from 'react-native';
+import Constants from 'expo-constants';
+
+// Expo Go인지 확인
+const isExpoGo = Constants.appOwnership === 'expo';
 
 // 플랫폼별 조건부 import
 let RewardedAd, RewardedAdEventType, TestIds;
 
-if (Platform.OS !== 'web') {
+if (Platform.OS !== 'web' && !isExpoGo) {
   try {
     const ads = require('react-native-google-mobile-ads');
     RewardedAd = ads.RewardedAd;
@@ -16,7 +20,7 @@ if (Platform.OS !== 'web') {
 }
 
 // 테스트용 광고 단위 ID
-const REWARDED_AD_UNIT_ID = Platform.OS !== 'web' ? Platform.select({
+const REWARDED_AD_UNIT_ID = Platform.OS !== 'web' && TestIds ? Platform.select({
   android: TestIds.REWARDED,
   ios: TestIds.REWARDED,
 }) : null;
@@ -26,8 +30,8 @@ let isAdLoaded = false;
 let isAdLoading = false;
 
 export const loadRewardedAd = () => {
-  if (Platform.OS === 'web') {
-    // 웹에서는 광고 로드 안 함
+  if (Platform.OS === 'web' || isExpoGo) {
+    // 웹이나 Expo Go에서는 광고 로드 안 함
     return Promise.resolve({ success: true, skipped: true });
   }
 
@@ -62,8 +66,8 @@ export const loadRewardedAd = () => {
 
 export const showRewardedAd = () => {
   return new Promise((resolve) => {
-    if (Platform.OS === 'web') {
-      // 웹에서는 광고 스킵
+    if (Platform.OS === 'web' || isExpoGo) {
+      // 웹이나 Expo Go에서는 광고 스킵
       resolve({ success: true, skipped: true });
       return;
     }
@@ -89,8 +93,8 @@ export const showRewardedAd = () => {
 };
 
 export const showRewardedAdOrSkip = async () => {
-  if (Platform.OS === 'web') {
-    // 웹에서는 바로 스킵
+  if (Platform.OS === 'web' || isExpoGo) {
+    // 웹이나 Expo Go에서는 바로 스킵
     return { success: true, skipped: true };
   }
 

@@ -338,6 +338,8 @@ export default function FruitBoxScreen({ onBackToStart, mapSize = DEFAULT_GRID_S
   };
   
   useEffect(() => {
+    if (Platform.OS !== 'web') return;
+
     const preventContextMenu = (e) => {
       e.preventDefault();
       return false;

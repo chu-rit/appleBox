@@ -12,8 +12,6 @@ import FruitBoxScreen from './screens/FruitBoxScreen';
 export default function Game() {
   const [screen, setScreen] = useState('start'); // 'start', 'game', 'ranking', 'settings'
   const [running, setRunning] = useState(false);
-  const animationRef = useRef(null);
-  const [tick, setTick] = useState(0);
   const [mapSize, setMapSize] = useState(6); // 5~8 configurable
   const [gameMode, setGameMode] = useState('fruit'); // 'apple' or 'fruit'
   const [bgmOn, setBgmOn] = useState(true);
@@ -72,22 +70,6 @@ export default function Game() {
   const reset = () => {
     // TODO: Reset game state
   };
-
-  const gameLoop = () => {
-    if (!running) return;
-    // TODO: Your game logic here
-    setTick(t => t + 1);
-    animationRef.current = requestAnimationFrame(gameLoop);
-  };
-
-  useEffect(() => {
-    if (running) {
-      animationRef.current = requestAnimationFrame(gameLoop);
-    }
-    return () => {
-      if (animationRef.current) cancelAnimationFrame(animationRef.current);
-    };
-  }, [running]);
 
   // Render screens
   const renderScreen = () => {
