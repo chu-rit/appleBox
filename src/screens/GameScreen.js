@@ -1,10 +1,10 @@
 import React, { useState, useRef, useCallback, useEffect, useMemo } from 'react';
-import AppleIcon from '../assets/icons/AppleIcon';
 import {
   View,
   Text,
   StyleSheet,
   Dimensions,
+  Image,
 } from 'react-native';
 import { Gesture, GestureDetector, GestureHandlerRootView } from 'react-native-gesture-handler';
 import Animated, {
@@ -560,7 +560,11 @@ function Cell({ cell, anims, isSelected, cellSize }) {
     >
       {cell.value > 0 && (
         <>
-          <AppleIcon size={appleFontSize} />
+          <Image 
+            source={require('../assets/img/apple.png')} 
+            style={{ width: appleFontSize, height: appleFontSize }} 
+            resizeMode="contain" 
+          />
           <Text style={[styles.number, { fontSize: numberFontSize }]}>{cell.value}</Text>
         </>
       )}

@@ -7,32 +7,37 @@ import {
   Dimensions,
   Modal,
   Linking,
+  Image,
 } from 'react-native';
-import AppleIcon from '../assets/icons/AppleIcon';
-import OrangeIcon from '../assets/icons/OrangeIcon';
-import GrapeIcon from '../assets/icons/GrapeIcon';
-import StrawberryIcon from '../assets/icons/StrawberryIcon';
-import PearIcon from '../assets/icons/PearIcon';
-import WatermelonIcon from '../assets/icons/WatermelonIcon';
-import PeachIcon from '../assets/icons/PeachIcon';
-import PineappleIcon from '../assets/icons/PineappleIcon';
-import FruitBoxLogo from '../assets/icons/FruitBoxLogo';
 import { startBGM } from '../services/musicService';
 import { playStartSFX } from '../services/sfxService';
 
 const { width, height } = Dimensions.get('window');
 
+const FRUIT_IMAGES = {
+  apple: require('../assets/img/apple.png'),
+  orange: require('../assets/img/orange.png'),
+  grape: require('../assets/img/grape.png'),
+  pear: require('../assets/img/pear.png'),
+  watermelon: require('../assets/img/watermelon.png'),
+  strawberry: require('../assets/img/strawberry.png'),
+  peach: require('../assets/img/peach.png'),
+  pineapple: require('../assets/img/pineapple.png'),
+};
+
+const LOGO_IMAGE = require('../assets/img/FruitBoxLogo.png');
+
 const BG_FRUITS = [
-  { Icon: AppleIcon,       size: 55, top: height*0.04,  left: width*0.05,  rotate: '-15deg', opacity: 0.18 },
-  { Icon: OrangeIcon,      size: 48, top: height*0.07,  right: width*0.06, rotate: '20deg',  opacity: 0.18 },
-  { Icon: GrapeIcon,       size: 52, top: height*0.17,  left: width*0.72,  rotate: '-8deg',  opacity: 0.15 },
-  { Icon: StrawberryIcon,  size: 44, top: height*0.25,  left: width*0.03,  rotate: '12deg',  opacity: 0.18 },
-  { Icon: PearIcon,        size: 50, top: height*0.38,  right: width*0.04, rotate: '-20deg', opacity: 0.15 },
-  { Icon: WatermelonIcon,  size: 60, top: height*0.55,  left: width*0.05,  rotate: '8deg',   opacity: 0.15 },
-  { Icon: PeachIcon,       size: 46, top: height*0.62,  right: width*0.07, rotate: '15deg',  opacity: 0.18 },
-  { Icon: PineappleIcon,   size: 56, top: height*0.72,  left: width*0.68,  rotate: '-10deg', opacity: 0.13 },
-  { Icon: AppleIcon,       size: 42, top: height*0.80,  left: width*0.07,  rotate: '25deg',  opacity: 0.13 },
-  { Icon: OrangeIcon,      size: 50, top: height*0.85,  right: width*0.10, rotate: '-5deg',  opacity: 0.15 },
+  { fruit: 'apple',      size: 55, top: height*0.04,  left: width*0.05,  rotate: '-15deg', opacity: 0.18 },
+  { fruit: 'orange',     size: 48, top: height*0.07,  right: width*0.06, rotate: '20deg',  opacity: 0.18 },
+  { fruit: 'grape',      size: 52, top: height*0.17,  left: width*0.72,  rotate: '-8deg',  opacity: 0.15 },
+  { fruit: 'strawberry', size: 44, top: height*0.25,  left: width*0.03,  rotate: '12deg',  opacity: 0.18 },
+  { fruit: 'pear',       size: 50, top: height*0.38,  right: width*0.04, rotate: '-20deg', opacity: 0.15 },
+  { fruit: 'watermelon', size: 60, top: height*0.55,  left: width*0.05,  rotate: '8deg',   opacity: 0.15 },
+  { fruit: 'peach',      size: 46, top: height*0.62,  right: width*0.07, rotate: '15deg',  opacity: 0.18 },
+  { fruit: 'pineapple',  size: 56, top: height*0.72,  left: width*0.68,  rotate: '-10deg', opacity: 0.13 },
+  { fruit: 'apple',      size: 42, top: height*0.80,  left: width*0.07,  rotate: '25deg',  opacity: 0.13 },
+  { fruit: 'orange',     size: 50, top: height*0.85,  right: width*0.10, rotate: '-5deg',  opacity: 0.15 },
 ];
 
 export default function StartScreen({ onStart, onSettings, onRanking, onLogoPress, gameMode = 'apple' }) {
@@ -43,29 +48,29 @@ export default function StartScreen({ onStart, onSettings, onRanking, onLogoPres
     <View style={[styles.container, isFruitMode && styles.containerFruit]}>
 
       {/* Background fruit icons */}
-      {BG_FRUITS.map(({ Icon, size, top, left, right, rotate, opacity }, i) => (
-        <View
+      {BG_FRUITS.map(({ fruit, size, top, left, right, rotate, opacity }, i) => (
+        <Image
           key={i}
+          source={FRUIT_IMAGES[fruit]}
           pointerEvents="none"
-          style={[styles.bgFruit, { top, left, right, opacity, transform: [{ rotate }] }]}
-        >
-          <Icon size={size} />
-        </View>
+          style={[styles.bgFruit, { width: size, height: size, top, left, right, opacity, transform: [{ rotate }] }]}
+          resizeMode="contain"
+        />
       ))}
 
       {/* Title Section */}
       <View style={styles.titleContainer}>
         <TouchableOpacity style={styles.iconBox} onPress={onLogoPress} activeOpacity={0.8}>
-          <AppleIcon size={72} />
+          <Image source={FRUIT_IMAGES.apple} style={{ width: 72, height: 72 }} resizeMode="contain" />
         </TouchableOpacity>
-        <FruitBoxLogo width={280} isFruitMode={isFruitMode} />
+        <Image source={LOGO_IMAGE} style={{ width: 280, height: 132 }} resizeMode="contain" />
         <Text style={styles.subtitle}>{isFruitMode ? 'Mix & Match' : 'Collect & Stack'}</Text>
         <View style={styles.fruitRow}>
-          <OrangeIcon size={28} />
-          <GrapeIcon size={28} />
-          <StrawberryIcon size={28} />
-          <PearIcon size={28} />
-          <WatermelonIcon size={28} />
+          <Image source={FRUIT_IMAGES.orange} style={{ width: 28, height: 28 }} resizeMode="contain" />
+          <Image source={FRUIT_IMAGES.grape} style={{ width: 28, height: 28 }} resizeMode="contain" />
+          <Image source={FRUIT_IMAGES.strawberry} style={{ width: 28, height: 28 }} resizeMode="contain" />
+          <Image source={FRUIT_IMAGES.pear} style={{ width: 28, height: 28 }} resizeMode="contain" />
+          <Image source={FRUIT_IMAGES.watermelon} style={{ width: 28, height: 28 }} resizeMode="contain" />
         </View>
       </View>
 

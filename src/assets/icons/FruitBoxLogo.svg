@@ -1,0 +1,47 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 250 115" width="250" height="115">
+  <!-- 붓칠 blob 배경 -->
+  <path d="M14 8 Q22 4 34 7 Q42 9 44 18 Q46 28 40 33 Q32 38 20 35 Q10 32 8 22 Q6 12 14 8 Z" fill="#FF3B2F" opacity="0.18" />
+  <path d="M58 6 Q68 2 80 5 Q90 8 92 18 Q94 29 87 34 Q78 40 64 37 Q52 33 50 22 Q48 11 58 6 Z" fill="#FF8C00" opacity="0.18" />
+  <path d="M102 7 Q113 2 126 6 Q136 10 137 21 Q138 32 130 37 Q120 42 106 38 Q94 34 93 22 Q92 10 102 7 Z" fill="#AB47BC" opacity="0.18" />
+  <path d="M148 8 Q155 4 163 7 Q169 10 170 19 Q171 29 165 33 Q157 38 148 35 Q141 32 140 22 Q139 12 148 8 Z" fill="#E91E63" opacity="0.18" />
+  <path d="M188 6 Q200 2 215 6 Q225 10 226 21 Q227 32 218 37 Q206 42 192 38 Q180 34 179 22 Q178 10 188 6 Z" fill="#4CAF50" opacity="0.18" />
+  <path d="M30 58 Q42 53 58 57 Q70 61 71 73 Q72 85 62 90 Q50 96 35 92 Q22 87 20 74 Q18 62 30 58 Z" fill="#FFAB76" opacity="0.18" />
+  <path d="M88 57 Q102 52 118 57 Q130 62 131 74 Q132 86 120 91 Q107 97 92 92 Q78 87 77 74 Q76 62 88 57 Z" fill="#D4E000" opacity="0.18" />
+  <path d="M148 58 Q162 53 178 57 Q190 61 191 73 Q192 85 180 90 Q166 96 152 92 Q138 87 137 74 Q136 62 148 58 Z" fill="#FFD600" opacity="0.18" />
+
+  <!-- FRUIT 글자들 -->
+  <g transform="rotate(-2, 22, 46)">
+    <text x="22" y="46" font-size="52" font-weight="900" fill="none" stroke="#7B1100" stroke-width="9" stroke-linejoin="round" stroke-linecap="round" font-family="Arial Rounded MT Bold, Arial Black, sans-serif">F</text>
+    <text x="22" y="46" font-size="52" font-weight="900" fill="#FF3B2F" font-family="Arial Rounded MT Bold, Arial Black, sans-serif">F</text>
+  </g>
+  <g transform="rotate(2, 68, 46)">
+    <text x="68" y="46" font-size="52" font-weight="900" fill="none" stroke="#7B4000" stroke-width="9" stroke-linejoin="round" stroke-linecap="round" font-family="Arial Rounded MT Bold, Arial Black, sans-serif">R</text>
+    <text x="68" y="46" font-size="52" font-weight="900" fill="#FF8C00" font-family="Arial Rounded MT Bold, Arial Black, sans-serif">R</text>
+  </g>
+  <g transform="rotate(-2, 114, 46)">
+    <text x="114" y="46" font-size="52" font-weight="900" fill="none" stroke="#4A0072" stroke-width="9" stroke-linejoin="round" stroke-linecap="round" font-family="Arial Rounded MT Bold, Arial Black, sans-serif">U</text>
+    <text x="114" y="46" font-size="52" font-weight="900" fill="#AB47BC" font-family="Arial Rounded MT Bold, Arial Black, sans-serif">U</text>
+  </g>
+  <g transform="rotate(2, 168, 46)">
+    <text x="168" y="46" font-size="52" font-weight="900" fill="none" stroke="#7B0032" stroke-width="9" stroke-linejoin="round" stroke-linecap="round" font-family="Arial Rounded MT Bold, Arial Black, sans-serif">I</text>
+    <text x="168" y="46" font-size="52" font-weight="900" fill="#E91E63" font-family="Arial Rounded MT Bold, Arial Black, sans-serif">I</text>
+  </g>
+  <g transform="rotate(-2, 204, 46)">
+    <text x="204" y="46" font-size="52" font-weight="900" fill="none" stroke="#0A3D0A" stroke-width="9" stroke-linejoin="round" stroke-linecap="round" font-family="Arial Rounded MT Bold, Arial Black, sans-serif">T</text>
+    <text x="204" y="46" font-size="52" font-weight="900" fill="#2E7D32" font-family="Arial Rounded MT Bold, Arial Black, sans-serif">T</text>
+  </g>
+
+  <!-- BOX 글자들 -->
+  <g transform="rotate(2, 55, 95)">
+    <text x="55" y="95" font-size="48" font-weight="900" fill="none" stroke="#7B3000" stroke-width="9" stroke-linejoin="round" stroke-linecap="round" font-family="Arial Rounded MT Bold, Arial Black, sans-serif">B</text>
+    <text x="55" y="95" font-size="48" font-weight="900" fill="#FF6D3A" font-family="Arial Rounded MT Bold, Arial Black, sans-serif">B</text>
+  </g>
+  <g transform="rotate(-2, 112, 95)">
+    <text x="112" y="95" font-size="48" font-weight="900" fill="none" stroke="#4A5200" stroke-width="9" stroke-linejoin="round" stroke-linecap="round" font-family="Arial Rounded MT Bold, Arial Black, sans-serif">O</text>
+    <text x="112" y="95" font-size="48" font-weight="900" fill="#A0B800" font-family="Arial Rounded MT Bold, Arial Black, sans-serif">O</text>
+  </g>
+  <g transform="rotate(2, 168, 95)">
+    <text x="168" y="95" font-size="48" font-weight="900" fill="none" stroke="#7B4000" stroke-width="9" stroke-linejoin="round" stroke-linecap="round" font-family="Arial Rounded MT Bold, Arial Black, sans-serif">X</text>
+    <text x="168" y="95" font-size="48" font-weight="900" fill="#FF8F00" font-family="Arial Rounded MT Bold, Arial Black, sans-serif">X</text>
+  </g>
+</svg>

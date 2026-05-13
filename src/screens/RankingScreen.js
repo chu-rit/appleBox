@@ -7,9 +7,11 @@ import {
   Dimensions,
   ScrollView,
   ActivityIndicator,
+  Image,
 } from 'react-native';
-import Svg, { Path } from 'react-native-svg';
 import { getRankings, getWeeklyRankings } from '../services/rankingService';
+
+const BACK_ARROW = require('../assets/img/back_arrow.png');
 
 const { width, height } = Dimensions.get('window');
 
@@ -51,9 +53,7 @@ export default function RankingScreen({ onBack }) {
       {/* Header */}
       <View style={styles.header}>
         <TouchableOpacity style={styles.backButton} onPress={onBack}>
-          <Svg width={28} height={28} viewBox="0 0 28 28">
-            <Path d="M18 5 L9 14 L18 23" stroke="#8B7355" strokeWidth="2.8" strokeLinecap="round" strokeLinejoin="round" fill="none" />
-          </Svg>
+          <Image source={BACK_ARROW} style={{ width: 24, height: 24 }} resizeMode="contain" />
         </TouchableOpacity>
         <Text style={styles.title}>RANKING</Text>
         <View style={styles.placeholder} />

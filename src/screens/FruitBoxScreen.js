@@ -17,16 +17,18 @@ import Animated, {
   withTiming,
   withSpring,
 } from 'react-native-reanimated';
-import Svg, { Path, Circle } from 'react-native-svg';
-import AppleIcon from '../assets/icons/AppleIcon';
-import OrangeIcon from '../assets/icons/OrangeIcon';
-import GrapeIcon from '../assets/icons/GrapeIcon';
-import PearIcon from '../assets/icons/PearIcon';
-import WatermelonIcon from '../assets/icons/WatermelonIcon';
-import StrawberryIcon from '../assets/icons/StrawberryIcon';
-import PeachIcon from '../assets/icons/PeachIcon';
-import PineappleIcon from '../assets/icons/PineappleIcon';
 import FruitBlock from '../assets/icons/FruitBlock';
+
+const FRUIT_IMAGES = {
+  apple: require('../assets/img/apple.png'),
+  orange: require('../assets/img/orange.png'),
+  grape: require('../assets/img/grape.png'),
+  pear: require('../assets/img/pear.png'),
+  watermelon: require('../assets/img/watermelon.png'),
+  strawberry: require('../assets/img/strawberry.png'),
+  peach: require('../assets/img/peach.png'),
+  pineapple: require('../assets/img/pineapple.png'),
+};
 import { saveRanking } from '../services/rankingService';
 import { showRewardedAdOrSkip } from '../services/adService';
 import { startBGM, stopBGM, pauseBGM, resumeBGM, setBGMRateByTime } from '../services/musicService';
@@ -52,11 +54,6 @@ const getCustomerImg = (request, seed) => {
 const { width } = Dimensions.get('window');
 const DEFAULT_GRID_SIZE = 6;
 const FRUITS = ['apple', 'orange', 'grape', 'pear', 'watermelon', 'strawberry', 'peach', 'pineapple'];
-
-const FRUIT_ICON = {
-  apple: AppleIcon, orange: OrangeIcon, grape: GrapeIcon, pear: PearIcon,
-  watermelon: WatermelonIcon, strawberry: StrawberryIcon, peach: PeachIcon, pineapple: PineappleIcon,
-};
 
 const generateC5Condition = (board) => {
   const type = Math.random() < 0.5 ? 'include' : 'exclude';
@@ -718,9 +715,7 @@ export default function FruitBoxScreen({ onBackToStart, mapSize = DEFAULT_GRID_S
     <View style={[styles.container, { backgroundColor: theme.bg }]}>
       <View style={styles.header}>
         <TouchableOpacity style={styles.backBtn} onPress={onBackToStart}>
-          <Svg width={28} height={28} viewBox="0 0 28 28">
-            <Path d="M18 5 L9 14 L18 23" stroke="#8B7355" strokeWidth="2.8" strokeLinecap="round" strokeLinejoin="round" fill="none" />
-          </Svg>
+          <Image source={require('../assets/img/back_arrow.png')} style={{ width: 24, height: 24 }} resizeMode="contain" />
         </TouchableOpacity>
         {/* <TouchableOpacity style={styles.resetBtn} onPress={() => setPaused(p => !p)}><Text style={styles.resetIcon}>{paused ? '▶' : '⏸'}</Text></TouchableOpacity> */}
       </View>
@@ -765,37 +760,19 @@ export default function FruitBoxScreen({ onBackToStart, mapSize = DEFAULT_GRID_S
           <Animated.View style={[styles.characterEmojiWrapper, customerSlideStyle]}>
             <Image source={getCustomerImg(customerRequest, customerImgSeed)} style={customerRequest <= 9 ? styles.customerImageSmall : styles.customerImage} resizeMode="contain" />
             <View style={[styles.svgBubbleContainer, c5Condition && styles.svgBubbleContainerLarge]}>
-              {Platform.OS === 'web' ? (
-                <img
-                  src={c5Condition
-                    ? "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 200 180'%3E%3Cpath d='M100 155C138.66 155 170 129.614 170 98C170 66.3858 138.66 41 100 41C61.3401 41 30 66.3858 30 98C30 114.517 38.6946 129.49 52.4838 139.396C51.6885 145.516 49.3333 155.833 40 167C53.3333 165 70 160.5 78.5 153.5C85.4221 154.628 92.6288 155 100 155Z' fill='%23FF6B42'/%3E%3C/svg%3E"
-                    : "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 200 150'%3E%3Cpath d='M100 125C138.66 125 170 102.614 170 75C170 47.3858 138.66 25 100 25C61.3401 25 30 47.3858 30 75C30 89.5167 38.6946 102.49 52.4838 111.396C51.6885 116.516 49.3333 124.833 40 135C53.3333 133 70 128.5 78.5 122.5C85.4221 124.128 92.6288 125 100 125Z' fill='%23FF6B42'/%3E%3C/svg%3E"
-                  }
-                  style={{ width: '100%', height: '100%', position: 'absolute' }}
-                  alt=""
-                />
-              ) : (
-                c5Condition ? (
-                  <Svg width="100%" height="100%" viewBox="0 0 200 180">
-                    <Path d="M100 155C138.66 155 170 129.614 170 98C170 66.3858 138.66 41 100 41C61.3401 41 30 66.3858 30 98C30 114.517 38.6946 129.49 52.4838 139.396C51.6885 145.516 49.3333 155.833 40 167C53.3333 165 70 160.5 78.5 153.5C85.4221 154.628 92.6288 155 100 155Z" fill="#FF6B42" />
-                  </Svg>
-                ) : (
-                  <Svg width="100%" height="100%" viewBox="0 0 200 150">
-                    <Path d="M100 125C138.66 125 170 102.614 170 75C170 47.3858 138.66 25 100 25C61.3401 25 30 47.3858 30 75C30 89.5167 38.6946 102.49 52.4838 111.396C51.6885 116.516 49.3333 124.833 40 135C53.3333 133 70 128.5 78.5 122.5C85.4221 124.128 92.6288 125 100 125Z" fill="#FF6B42" />
-                  </Svg>
-                )
-              )}
+              <Image 
+                source={require('../assets/img/bubble.png')} 
+                style={{ width: '100%', height: '100%', position: 'absolute' }} 
+                resizeMode="contain"
+              />
               <View style={styles.bubbleContent}>
                 <Text style={styles.svgBubbleText}>{customerRequest}</Text>
-                {c5Condition && (() => {
-                  const FruitIconComp = FRUIT_ICON[c5Condition.fruit];
-                  return (
-                    <View style={styles.bubbleFruitRow}>
-                      {FruitIconComp && <FruitIconComp size={20} />}
-                      {c5Condition.type === 'exclude' && <Text style={styles.bubbleFruitType}>❌</Text>}
-                    </View>
-                  );
-                })()}
+                {c5Condition && (
+                  <View style={styles.bubbleFruitRow}>
+                    <Image source={FRUIT_IMAGES[c5Condition.fruit]} style={{ width: 20, height: 20 }} resizeMode="contain" />
+                    {c5Condition.type === 'exclude' && <Text style={styles.bubbleFruitType}>❌</Text>}
+                  </View>
+                )}
               </View>
             </View>
           </Animated.View>
@@ -992,20 +969,11 @@ function Cell({ cell, anims, isSelected, cellSize, blockFill, blockStroke }) {
             blockStroke={blockStroke}
           />
           <View style={styles.cellContent}>
-            {(() => {
-              const iconSize = appleFontSize * 1.2;
-              switch (cell.fruit) {
-                case 'apple':       return <AppleIcon size={iconSize} />;
-                case 'orange':      return <OrangeIcon size={iconSize} />;
-                case 'grape':       return <GrapeIcon size={iconSize} />;
-                case 'pear':        return <PearIcon size={iconSize} />;
-                case 'watermelon':  return <WatermelonIcon size={iconSize} />;
-                case 'strawberry':  return <StrawberryIcon size={iconSize} />;
-                case 'peach':       return <PeachIcon size={iconSize} />;
-                case 'pineapple':   return <PineappleIcon size={iconSize} />;
-                default: return <AppleIcon size={iconSize} />;
-              }
-            })()}
+            <Image 
+              source={FRUIT_IMAGES[cell.fruit] || FRUIT_IMAGES.apple} 
+              style={{ width: appleFontSize * 1.2, height: appleFontSize * 1.2 }} 
+              resizeMode="contain" 
+            />
             <Text style={[styles.number, { fontSize: numberFontSize, lineHeight: numberFontSize * 1.2 }]}>{cell.value}</Text>
           </View>
         </>
@@ -1082,6 +1050,14 @@ const styles = StyleSheet.create({
   svgBubbleContainerLarge: {
     width: 80,
     height: 70,
+  },
+  bubbleBg: {
+    position: 'absolute',
+    width: '100%',
+    height: '85%',
+    backgroundColor: '#FF6B42',
+    borderRadius: 12,
+    top: 0,
   },
   bubbleContent: {
     position: 'absolute',
