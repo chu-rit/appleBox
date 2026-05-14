@@ -1,7 +1,7 @@
 {
   "expo": {
-    "name": "appleBox",
-    "slug": "applebox",
+    "name": "fruitBox",
+    "slug": "fruitbox",
     "version": "1.0.0",
     "sdkVersion": "51.0.0",
     "orientation": "portrait",
@@ -28,7 +28,7 @@
     },
     "web": {
       "bundler": "metro",
-      "publicPath": "/appleBox/",
+      "publicPath": "/fruitBox/",
       "favicon": "./assets/icon.png",
       "name": "Fruit Box",
       "shortName": "FruitBox",
