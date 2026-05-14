@@ -17,14 +17,14 @@
     ],
     "ios": {
       "supportsTablet": true,
-      "bundleIdentifier": "com.yourcompany.applebox"
+      "bundleIdentifier": "com.churit.fruitbox"
     },
     "android": {
       "adaptiveIcon": {
         "foregroundImage": "./assets/adaptive-icon.png",
         "backgroundColor": "#000000"
       },
-      "package": "com.yourcompany.applebox"
+      "package": "com.churit.fruitbox"
     },
     "web": {
       "bundler": "metro",
