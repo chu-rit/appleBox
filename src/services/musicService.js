@@ -41,7 +41,15 @@ export async function startBGM() {
   if (!sound) return;
   try {
     const status = await sound.getStatusAsync();
-    if (status.isLoaded && !status.isPlaying && bgmEnabled) await sound.playAsync();
+    if (status.isLoaded && !status.isPlaying && bgmEnabled) {
+      await sound.playAsync();
+      if (pendingRate) {
+        console.log('[BGM] Applying pending rate:', pendingRate);
+        currentRate = pendingRate;
+        pendingRate = null;
+        await sound.setRateAsync(currentRate, true);
+      }
+    }
   } catch (e) {
     console.log('[BGM] 재생 실패:', e);
   }
@@ -73,14 +81,20 @@ export async function resumeBGM() {
 }
 
 // 남은 시간 구간별 rate
-// 10초 이상: 1.0x / 5~9초: 1.6x / 5초 미만: 2.2x
-let currentRate = 1.0;
+// 10초 이상: 1.0x / 5~9초: 1.5x / 5초 미만: 2.0x
+let currentRate = 0;
+let pendingRate = null;
 export async function setBGMRateByTime(timeLeft) {
   try {
-    if (!sound) return;
-    const rate = timeLeft > 9 ? 1.0 : timeLeft > 5 ? 1.6 : 2.2;
-    if (rate === currentRate) return;
-    currentRate = rate;
-    await sound.setRateAsync(rate, true);
+    const rate = timeLeft > 9 ? 1.0 : timeLeft > 5 ? 1.5 : 2.0;
+    if (!sound) {
+      pendingRate = rate;
+      return;
+    }
+    if (rate !== currentRate) {
+      currentRate = rate;
+      pendingRate = null;
+      await sound.setRateAsync(rate, true);
+    }
   } catch (e) {}
 }

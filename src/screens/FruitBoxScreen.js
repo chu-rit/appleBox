@@ -19,6 +19,8 @@ import Animated, {
   useAnimatedReaction,
   withTiming,
   withSpring,
+  withSequence,
+  withDelay,
   runOnJS,
 } from 'react-native-reanimated';
 
@@ -213,7 +215,7 @@ export default function FruitBoxScreen({ onBackToStart, mapSize = DEFAULT_GRID_S
   const [playerName, setPlayerName] = useState('');
   const prevLevelRef = useRef(1);
   const [chance, setChance] = useState(1);
-  const [hintCells, setHintCells] = useState(null); // { r1, c1, r2, c2 }
+  const hintCells = useSharedValue(null); // { r1, c1, r2, c2 } or 'TRIGGER'
   const chanceUsedRef = useRef(false);
   const combosRef = useRef([]);
   const c5ConditionRef = useRef(c5Condition);
@@ -240,6 +242,7 @@ export default function FruitBoxScreen({ onBackToStart, mapSize = DEFAULT_GRID_S
   const scoreScale = useSharedValue(1);
   const deliveryScale = useSharedValue(0);
   const deliveryY = useSharedValue(0);
+  const hintShake = useSharedValue(0);
   const timerBarFlash = useSharedValue(0);
   const levelUpScale = useSharedValue(0);
   const levelUpOpacity = useSharedValue(0);
@@ -257,8 +260,8 @@ export default function FruitBoxScreen({ onBackToStart, mapSize = DEFAULT_GRID_S
   // BGM 관리 - StartScreen의 START 버튼 클릭 시 이미 startBGM 호출됨
   useEffect(() => {
     playStartSFX();
-    // startBGM(); // BGM 비활성화하여 성능 테스트
-    return () => { /* stopBGM(); */ };
+    startBGM();
+    return () => { stopBGM(); };
   }, []);
 
   useEffect(() => {
@@ -273,8 +276,8 @@ export default function FruitBoxScreen({ onBackToStart, mapSize = DEFAULT_GRID_S
   }, [gameOver, paused]);
 
   useEffect(() => {
-    if (!paused && !gameOver) {
-      setBGMRateByTime(timeLeft.value);
+    if (paused || gameOver) {
+      pauseBGM();
     }
   }, [paused, gameOver]);
 
@@ -306,7 +309,7 @@ export default function FruitBoxScreen({ onBackToStart, mapSize = DEFAULT_GRID_S
         setChance(c => {
           if (c > 0) {
             // trigger hint via separate effect
-            setHintCells('TRIGGER');
+            hintCells.value = 'TRIGGER';
             return 0;
           }
           return c;
@@ -401,23 +404,29 @@ export default function FruitBoxScreen({ onBackToStart, mapSize = DEFAULT_GRID_S
     }
   }, []);
 
-  // Hint effect: when hintCells === 'TRIGGER', pick first combo and animate
+  // Hint effect: when hintCells === 'TRIGGER', shake cells in hint area
   useEffect(() => {
-    if (hintCells !== 'TRIGGER') return;
-    if (combosRef.current.length === 0) { setHintCells(null); return; }
+    if (hintCells.value !== 'TRIGGER') return;
+    if (combosRef.current.length === 0) { hintCells.value = null; return; }
     const combo = combosRef.current[0];
-    setHintCells(combo);
-    // Scale animation instead of rotateY
-    for (let r = combo.r1; r <= combo.r2; r++) {
-      for (let c = combo.c1; c <= combo.c2; c++) {
-        const anim = cellAnims[r][c];
-        anim.scale.value = withTiming(1.2, { duration: 250 }, () => {
-          anim.scale.value = withTiming(1, { duration: 250 });
-        });
-      }
-    }
-    setTimeout(() => setHintCells(null), 1200);
-  }, [hintCells]);
+    hintCells.value = combo;
+    hintShake.value = withSequence(
+      withTiming(1, { duration: 80 }),
+      withTiming(-1, { duration: 80 }),
+      withTiming(1, { duration: 80 }),
+      withTiming(-1, { duration: 80 }),
+      withTiming(0, { duration: 80 }),
+      withDelay(1000, withSequence(
+        withTiming(1, { duration: 80 }),
+        withTiming(-1, { duration: 80 }),
+        withTiming(1, { duration: 80 }),
+        withTiming(-1, { duration: 80 }),
+        withTiming(0, { duration: 80 }, () => {
+          runOnJS(() => { hintCells.value = null; })();
+        })
+      ))
+    );
+  }, [hintCells.value]);
 
   const combos = useMemo(() => {
     const result = [];
@@ -875,6 +884,8 @@ export default function FruitBoxScreen({ onBackToStart, mapSize = DEFAULT_GRID_S
                   colIndex={colIndex}
                   anims={cellAnims[rowIndex][colIndex]}
                   isSelected={isInSelection(rowIndex, colIndex)}
+                  hintCells={hintCells}
+                  hintShake={hintShake}
                   cellSize={CELL_SIZE}
                   blockFill={theme.blockFill}
                   blockStroke={theme.blockStroke}
@@ -923,6 +934,7 @@ const TimerBar = React.memo(function TimerBar({ timeLeft, maxTime, flashValue, s
     (current, previous) => {
       if (current !== previous) {
         runOnJS(setTimeDisplay)(current);
+        runOnJS(setBGMRateByTime)(timeLeft.value);
       }
     }
   );
@@ -994,24 +1006,25 @@ const timerStyles = StyleSheet.create({
   },
 });
 
-const Cell = React.memo(function Cell({ cell, anims, isSelected, cellSize, blockFill, blockStroke }) {
-  // Reanimated 비활성화 - 일반 View 사용
-  // const animatedStyle = useAnimatedStyle(() => ({
-  //   opacity: anims.opacity.value,
-  //   transform: [
-  //     { translateY: anims.translateY.value },
-  //     { scale: anims.scale.value },
-  //   ],
-  // }), []);
+const Cell = React.memo(function Cell({ cell, anims, isSelected, cellSize, blockFill, blockStroke, hintCells, hintShake, rowIndex, colIndex }) {
+  const shakeStyle = useAnimatedStyle(() => {
+    const hint = hintCells.value;
+    const isInHint = hint && hint !== 'TRIGGER' &&
+      rowIndex >= hint.r1 && rowIndex <= hint.r2 &&
+      colIndex >= hint.c1 && colIndex <= hint.c2;
+    return {
+      transform: [{ translateX: isInHint ? hintShake.value * 4 : 0 }],
+    };
+  });
 
   const appleFontSize = Math.floor(cellSize * 0.55);
   const numberFontSize = Math.floor(cellSize * 0.40);
 
   return (
-    <View style={[
-      styles.cellContainer, 
+    <Animated.View style={[
+      styles.cellContainer,
       { width: cellSize, height: cellSize },
-      // animatedStyle,
+      shakeStyle,
       isSelected && { transform: [{ scale: 0.95 }] }
     ]}>
       {cell.value > 0 && (
@@ -1034,7 +1047,7 @@ const Cell = React.memo(function Cell({ cell, anims, isSelected, cellSize, block
           </View>
         </>
       )}
-    </View>
+    </Animated.View>
   );
 }, (prevProps, nextProps) => {
   return prevProps.cell.value === nextProps.cell.value &&
@@ -1268,6 +1281,7 @@ const styles = StyleSheet.create({
   gameOverHint: { fontSize: 16, color: '#FFF', backgroundColor: '#FF8C42', paddingHorizontal: 24, paddingVertical: 12, borderRadius: 25, fontWeight: 'bold', overflow: 'hidden' },
   gridWrapper: { position: 'relative' },
   assistOverlay: { position: 'absolute', backgroundColor: 'rgba(255, 140, 66, 0.25)', borderWidth: 2, borderColor: '#FF8C42', borderRadius: 8, zIndex: 50 },
+  hintOverlay: { position: 'absolute', backgroundColor: 'rgba(255, 220, 0, 0.35)', borderWidth: 3, borderColor: '#FFD700', borderRadius: 8, zIndex: 60 },
   dragOverlay: { position: 'absolute', backgroundColor: 'rgba(255, 140, 66, 0.3)', borderWidth: 2, borderColor: '#FF8C42', zIndex: 100, pointerEvents: 'none' },
   row: { flexDirection: 'row' },
   cellContainer: { justifyContent: 'center', alignItems: 'center', margin: CELL_MARGIN },

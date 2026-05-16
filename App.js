@@ -3,6 +3,7 @@ import { useEffect } from 'react';
 import { Asset } from 'expo-asset';
 import Game from './src/Game';
 import { preloadSFX } from './src/services/sfxService';
+import { setBGMEnabled } from './src/services/musicService';
 
 const PRELOAD_IMAGES = [
   require('./src/assets/img/S1.png'),
@@ -17,6 +18,7 @@ const PRELOAD_IMAGES = [
 export default function App() {
   // Inject web CSS to prevent text selection and context menu
   useEffect(() => {
+    setBGMEnabled(true);
     preloadSFX();
     Asset.loadAsync(PRELOAD_IMAGES).catch(() => {});
   }, []);

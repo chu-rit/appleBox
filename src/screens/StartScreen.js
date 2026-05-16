@@ -76,17 +76,21 @@ export default function StartScreen({ onStart, onSettings, onRanking, onLogoPres
 
       {/* Menu Buttons */}
       <View style={styles.menuContainer}>
-        <TouchableOpacity style={[styles.button, isFruitMode && styles.buttonFruit]} onPress={() => { playStartSFX(); /* startBGM(); */ onStart(); }}>
+        <TouchableOpacity style={[styles.button, isFruitMode && styles.buttonFruit]} onPress={() => { playStartSFX(); startBGM(); onStart(); }}>
           <Text style={styles.buttonText}>▶  START GAME</Text>
         </TouchableOpacity>
 
+        {isFruitMode && (
         <TouchableOpacity style={[styles.buttonSecondary, isFruitMode && styles.buttonSecondaryFruit]} onPress={() => { playStartSFX(); onRanking(); }}>
           <Text style={[styles.buttonSecondaryText, isFruitMode && styles.buttonSecondaryTextFruit]}>🏆  RANKING</Text>
         </TouchableOpacity>
+      )}
 
+      {isFruitMode && (
         <TouchableOpacity style={[styles.buttonSecondary, isFruitMode && styles.buttonSecondaryFruit]} onPress={() => { playStartSFX(); onSettings(); }}>
           <Text style={[styles.buttonSecondaryText, isFruitMode && styles.buttonSecondaryTextFruit]}>⚙  SETTINGS</Text>
         </TouchableOpacity>
+      )}
       </View>
 
       {/* Footer */}
