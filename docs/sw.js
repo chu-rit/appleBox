@@ -1,4 +1,4 @@
-const CACHE_NAME = 'fruitbox-v1';
+const CACHE_NAME = 'fruitbox-v2';
 const STATIC_ASSETS = [
   '/fruitBox/',
   '/fruitBox/index.html',
