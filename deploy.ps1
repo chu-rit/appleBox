@@ -27,4 +27,48 @@ if ($jsFile) {
     Write-Host "Fixed: $($jsFile.Name)" -ForegroundColor Yellow
 }
 
+
+# Generate PWA manifest.json
+Write-Host "Generating manifest.json..." -ForegroundColor Cyan
+$manifest = @{
+  name = "Fruit Box"
+  short_name = "FruitBox"
+  description = "Collect & Stack fruits!"
+  start_url = "/fruitBox/"
+  scope = "/fruitBox/"
+  display = "standalone"
+  orientation = "portrait"
+  background_color = "#FFF8E7"
+  theme_color = "#FF4444"
+  icons = @(
+    @{ src = "/fruitBox/assets/src/assets/img/FruitBoxLogo.fd7ad383c5d1beaad760164b2075e4a0.png"; sizes = "192x192"; type = "image/png"; purpose = "any maskable" },
+    @{ src = "/fruitBox/assets/src/assets/img/FruitBoxLogo.fd7ad383c5d1beaad760164b2075e4a0.png"; sizes = "512x512"; type = "image/png"; purpose = "any maskable" }
+  )
+} | ConvertTo-Json -Depth 5
+[System.IO.File]::WriteAllText("$PWD\docs\manifest.json", $manifest)
+
+# Generate sw.js
+Write-Host "Generating sw.js..." -ForegroundColor Cyan
+$jsBundle = (Get-ChildItem "docs\_expo\static\js\web\AppEntry-*.js" | Select-Object -First 1).Name
+$sw = @"
+const CACHE_NAME = 'fruitbox-v1';
+const STATIC_ASSETS = ['/fruitBox/', '/fruitBox/index.html', '/fruitBox/manifest.json'];
+self.addEventListener('install', (e) => { e.waitUntil(caches.open(CACHE_NAME).then((c) => c.addAll(STATIC_ASSETS))); self.skipWaiting(); });
+self.addEventListener('activate', (e) => { e.waitUntil(caches.keys().then((keys) => Promise.all(keys.filter((k) => k !== CACHE_NAME).map((k) => caches.delete(k))))); self.clients.claim(); });
+self.addEventListener('fetch', (e) => { e.respondWith(caches.match(e.request).then((cached) => cached || fetch(e.request).catch(() => caches.match('/fruitBox/index.html')))); });
+"@
+[System.IO.File]::WriteAllText("$PWD\docs\sw.js", $sw)
+
+# Patch index.html for PWA meta tags and service worker
+Write-Host "Patching index.html for PWA..." -ForegroundColor Cyan
+$html = [System.IO.File]::ReadAllText("$PWD\docs\index.html")
+if ($html -notmatch 'rel="manifest"') {
+  $pwaHead = '<link rel="manifest" href="/fruitBox/manifest.json" /><link rel="apple-touch-icon" href="/fruitBox/assets/src/assets/img/FruitBoxLogo.fd7ad383c5d1beaad760164b2075e4a0.png" /><meta name="apple-mobile-web-app-capable" content="yes" /><meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" /><meta name="apple-mobile-web-app-title" content="FruitBox" /><meta name="mobile-web-app-capable" content="yes" />'
+  $swScript = '<script>if (''serviceWorker'' in navigator) { window.addEventListener(''load'', () => { navigator.serviceWorker.register(''/fruitBox/sw.js''); }); }</script>'
+  $html = $html -replace '</head>', "$pwaHead</head>"
+  $html = $html -replace '</body>', "$swScript</body>"
+  $html = $html -replace 'href="/favicon.ico"', 'href="/fruitBox/favicon.ico"'
+  [System.IO.File]::WriteAllText("$PWD\docs\index.html", $html)
+}
+
 Write-Host "Done! docs/ is ready for GitHub Pages." -ForegroundColor Green
