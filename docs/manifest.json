@@ -10,13 +10,13 @@
   "theme_color": "#FF4444",
   "icons": [
     {
-      "src": "/fruitBox/assets/src/assets/img/FruitBoxLogo.fd7ad383c5d1beaad760164b2075e4a0.png",
+      "src": "/fruitBox/icon.png",
       "sizes": "192x192",
       "type": "image/png",
       "purpose": "any maskable"
     },
     {
-      "src": "/fruitBox/assets/src/assets/img/FruitBoxLogo.fd7ad383c5d1beaad760164b2075e4a0.png",
+      "src": "/fruitBox/icon.png",
       "sizes": "512x512",
       "type": "image/png",
       "purpose": "any maskable"

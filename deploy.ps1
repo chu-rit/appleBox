@@ -28,6 +28,10 @@ if ($jsFile) {
 }
 
 
+# Copy icon
+Write-Host "Copying icon..." -ForegroundColor Cyan
+Copy-Item "src\assets\img\icon.png" -Destination "docs\icon.png" -Force
+
 # Generate PWA manifest.json
 Write-Host "Generating manifest.json..." -ForegroundColor Cyan
 $manifest = @{
@@ -41,8 +45,8 @@ $manifest = @{
   background_color = "#FFF8E7"
   theme_color = "#FF4444"
   icons = @(
-    @{ src = "/fruitBox/assets/src/assets/img/FruitBoxLogo.fd7ad383c5d1beaad760164b2075e4a0.png"; sizes = "192x192"; type = "image/png"; purpose = "any maskable" },
-    @{ src = "/fruitBox/assets/src/assets/img/FruitBoxLogo.fd7ad383c5d1beaad760164b2075e4a0.png"; sizes = "512x512"; type = "image/png"; purpose = "any maskable" }
+    @{ src = "/fruitBox/icon.png"; sizes = "192x192"; type = "image/png"; purpose = "any maskable" },
+    @{ src = "/fruitBox/icon.png"; sizes = "512x512"; type = "image/png"; purpose = "any maskable" }
   )
 } | ConvertTo-Json -Depth 5
 [System.IO.File]::WriteAllText("$PWD\docs\manifest.json", $manifest)
@@ -63,7 +67,7 @@ self.addEventListener('fetch', (e) => { e.respondWith(caches.match(e.request).th
 Write-Host "Patching index.html for PWA..." -ForegroundColor Cyan
 $html = [System.IO.File]::ReadAllText("$PWD\docs\index.html")
 if ($html -notmatch 'rel="manifest"') {
-  $pwaHead = '<link rel="manifest" href="/fruitBox/manifest.json" /><link rel="apple-touch-icon" href="/fruitBox/assets/src/assets/img/FruitBoxLogo.fd7ad383c5d1beaad760164b2075e4a0.png" /><meta name="apple-mobile-web-app-capable" content="yes" /><meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" /><meta name="apple-mobile-web-app-title" content="FruitBox" /><meta name="mobile-web-app-capable" content="yes" />'
+  $pwaHead = '<link rel="manifest" href="/fruitBox/manifest.json" /><link rel="apple-touch-icon" href="/fruitBox/icon.png" /><meta name="apple-mobile-web-app-capable" content="yes" /><meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" /><meta name="apple-mobile-web-app-title" content="FruitBox" /><meta name="mobile-web-app-capable" content="yes" />'
   $swScript = '<script>if (''serviceWorker'' in navigator) { window.addEventListener(''load'', () => { navigator.serviceWorker.register(''/fruitBox/sw.js''); }); }</script>'
   $html = $html -replace '</head>', "$pwaHead</head>"
   $html = $html -replace '</body>', "$swScript</body>"
