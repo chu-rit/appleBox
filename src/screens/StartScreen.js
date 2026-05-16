@@ -76,7 +76,7 @@ export default function StartScreen({ onStart, onSettings, onRanking, onLogoPres
 
       {/* Menu Buttons */}
       <View style={styles.menuContainer}>
-        <TouchableOpacity style={[styles.button, isFruitMode && styles.buttonFruit]} onPress={() => { playStartSFX(); startBGM(); onStart(); }}>
+        <TouchableOpacity style={[styles.button, isFruitMode && styles.buttonFruit]} onPress={() => { playStartSFX(); /* startBGM(); */ onStart(); }}>
           <Text style={styles.buttonText}>▶  START GAME</Text>
         </TouchableOpacity>
 

@@ -1,4 +1,3 @@
-import { StatusBar } from 'expo-status-bar';
 import { StyleSheet, View, Platform } from 'react-native';
 import { useEffect } from 'react';
 import { Asset } from 'expo-asset';
@@ -56,7 +55,6 @@ export default function App() {
   return (
     <View style={styles.container}>
       <Game />
-      <StatusBar hidden />
     </View>
   );
 }

@@ -12,6 +12,7 @@ import Animated, {
   useAnimatedStyle,
   withTiming,
   withSpring,
+  runOnJS,
   withSequence,
 } from 'react-native-reanimated';
 
@@ -89,19 +90,20 @@ export default function GameScreen({ onBackToStart, mapSize = DEFAULT_GRID_SIZE 
   const [selection, setSelection] = useState(null);
   const [dragRect, setDragRect] = useState(null);
   const [isDragging, setIsDragging] = useState(false);
-  const [timeLeft, setTimeLeft] = useState(START_TIME);
+  const timeLeft = useSharedValue(START_TIME);
   const [gameOver, setGameOver] = useState(false);
   const dragStartPos = useRef({ x: 0, y: 0 });
   const selectionRef = useRef(null);
   const timerRef = useRef(null);
   
   // Reanimated shared values for cell animations (dynamic grid)
+  // cellAnims 비활성화 - 243개 useSharedValue 제거
   const cellAnims = useRef(
     Array(GRID_SIZE).fill(null).map(() =>
       Array(GRID_SIZE).fill(null).map(() => ({
-        opacity: useSharedValue(1),
-        scale: useSharedValue(1),
-        translateY: useSharedValue(0),
+        opacity: { value: 1 },
+        scale: { value: 1 },
+        translateY: { value: 0 },
       }))
     )
   ).current;
@@ -117,19 +119,28 @@ export default function GameScreen({ onBackToStart, mapSize = DEFAULT_GRID_SIZE 
   
   // Timer countdown
   useEffect(() => {
+    // 기존 interval 정리
+    if (timerRef.current) {
+      clearInterval(timerRef.current);
+      timerRef.current = null;
+    }
+    
     if (gameOver) return;
     
     timerRef.current = setInterval(() => {
-      setTimeLeft(prev => {
-        if (prev <= 0.1) {
-          setGameOver(true);
-          return 0;
-        }
-        return Math.max(0, prev - 0.1);
-      });
-    }, 100);
+      timeLeft.value = Math.max(0, timeLeft.value - 0.2);
+      if (timeLeft.value <= 0.2) {
+        timeLeft.value = 0;
+        setGameOver(true);
+      }
+    }, 200);
     
-    return () => clearInterval(timerRef.current);
+    return () => {
+      if (timerRef.current) {
+        clearInterval(timerRef.current);
+        timerRef.current = null;
+      }
+    };
   }, [gameOver]);
   
   // Prevent context menu globally
@@ -157,7 +168,7 @@ export default function GameScreen({ onBackToStart, mapSize = DEFAULT_GRID_SIZE 
     let sum = 0;
     for (let r = minRow; r <= maxRow; r++) {
       for (let c = minCol; c <= maxCol; c++) {
-        if (!board[r][c].removed) {
+        if (board[r] && board[r][c] && !board[r][c].removed) {
           sum += board[r][c].value;
         }
       }
@@ -206,7 +217,7 @@ export default function GameScreen({ onBackToStart, mapSize = DEFAULT_GRID_SIZE 
       }
     }
     return result;
-  }, [board, step]);
+  }, [board, step, GRID_SIZE]);
 
   const possibleCombinations = combos.length;
 
@@ -239,11 +250,11 @@ export default function GameScreen({ onBackToStart, mapSize = DEFAULT_GRID_SIZE 
     setBoard(newBoard);
     for (let r = 0; r < GRID_SIZE; r++) {
       for (let c = 0; c < GRID_SIZE; c++) {
-        cellAnims[r][c].opacity.value = withTiming(1, { duration: 300 });
-        cellAnims[r][c].scale.value = withSpring(1, { damping: 15 });
+        cellAnims[r][c].opacity.value = 1;
+        cellAnims[r][c].scale.value = 1;
       }
     }
-  }, [step, cellAnims, GRID_SIZE]);
+  }, [step, GRID_SIZE]);
   
   // Calculate time bonus based on apple count
   const calculateTimeBonus = (count) => {
@@ -254,7 +265,7 @@ export default function GameScreen({ onBackToStart, mapSize = DEFAULT_GRID_SIZE 
   
   // Add time to timer (capped at MAX_TIME)
   const addTime = useCallback((bonusSeconds) => {
-    setTimeLeft(prev => Math.min(MAX_TIME, prev + bonusSeconds));
+    timeLeft.value = Math.min(MAX_TIME, timeLeft.value + bonusSeconds);
   }, []);
 
   // Remove apples with simple animations
@@ -267,8 +278,8 @@ export default function GameScreen({ onBackToStart, mapSize = DEFAULT_GRID_SIZE 
     for (let r = minRow; r <= maxRow; r++) {
       for (let c = minCol; c <= maxCol; c++) {
         const anims = cellAnims[r][c];
-        anims.opacity.value = withTiming(0, { duration: 200 });
-        anims.scale.value = withTiming(0.8, { duration: 200 });
+        anims.opacity.value = 0;
+        anims.scale.value = 0.8;
       }
     }
     
@@ -288,6 +299,7 @@ export default function GameScreen({ onBackToStart, mapSize = DEFAULT_GRID_SIZE 
         }
         
         // Gravity: move existing apples down
+        const newStep = step + 1;
         for (let c = minCol; c <= maxCol; c++) {
           const columnCells = []; // { cell, originalRow }
           for (let r = 0; r < GRID_SIZE; r++) {
@@ -308,8 +320,10 @@ export default function GameScreen({ onBackToStart, mapSize = DEFAULT_GRID_SIZE 
             }
             writeRow--;
           }
+          // Cache next apple number per column
+          const nextAppleNum = getNextAppleNumber(newStep);
           for (let r = 0; r <= writeRow; r++) {
-            newBoard[r][c] = { value: getNextAppleNumber(newStep), removed: false };
+            newBoard[r][c] = { value: nextAppleNum, removed: false };
             const dropDist = (writeRow + 1) * (CELL_SIZE + CELL_MARGIN * 2);
             const anims = cellAnims[r][c];
             anims.opacity.value = 1;
@@ -326,14 +340,14 @@ export default function GameScreen({ onBackToStart, mapSize = DEFAULT_GRID_SIZE 
         for (let c = minCol; c <= maxCol; c++) {
           for (let r = 0; r < GRID_SIZE; r++) {
             const anims = cellAnims[r][c];
-            anims.translateY.value = withSpring(0, { damping: 14, stiffness: 120 });
-            anims.opacity.value = withTiming(1, { duration: 150 });
-            anims.scale.value = withSpring(1, { damping: 15 });
+            anims.translateY.value = 0;
+            anims.opacity.value = 1;
+            anims.scale.value = 1;
           }
         }
       }, 50);
     }, 200);
-  }, [board, step, cellAnims, scoreScale]);
+  }, [board, step]);
 
   // Get cell from position
   const getCellFromPos = (x, y) => {
@@ -346,11 +360,13 @@ export default function GameScreen({ onBackToStart, mapSize = DEFAULT_GRID_SIZE 
   };
 
   const isInSelection = (row, col) => {
-    if (!selection || !isDragging) return false;
-    const minRow = Math.min(selection.startRow, selection.endRow);
-    const maxRow = Math.max(selection.startRow, selection.endRow);
-    const minCol = Math.min(selection.startCol, selection.endCol);
-    const maxCol = Math.max(selection.startCol, selection.endCol);
+    if (!isDragging) return false;
+    const sel = selectionRef.current;
+    if (!sel) return false;
+    const minRow = Math.min(sel.startRow, sel.endRow);
+    const maxRow = Math.max(sel.startRow, sel.endRow);
+    const minCol = Math.min(sel.startCol, sel.endCol);
+    const maxCol = Math.max(sel.startCol, sel.endCol);
     return row >= minRow && row <= maxRow && col >= minCol && col <= maxCol;
   };
 
@@ -369,23 +385,10 @@ export default function GameScreen({ onBackToStart, mapSize = DEFAULT_GRID_SIZE 
     
     selectionRef.current = newSelection;
     setSelection(newSelection);
-    
-    setDragRect({
-      x1: x,
-      y1: y,
-      x2: x,
-      y2: y,
-    });
   }, []);
 
   const onDragUpdate = useCallback((x, y) => {
-    setDragRect({
-      x1: dragStartPos.current.x,
-      y1: dragStartPos.current.y,
-      x2: x,
-      y2: y,
-    });
-    
+    // 드래그 중에는 setDragRect 업데이트하지 않음 (리렌더링 방지)
     const startCell = getCellFromPos(dragStartPos.current.x, dragStartPos.current.y);
     const endCell = getCellFromPos(x, y);
     
@@ -419,19 +422,11 @@ export default function GameScreen({ onBackToStart, mapSize = DEFAULT_GRID_SIZE 
   }, [removeApples, step]);
 
   const panGesture = Gesture.Pan()
-    .onBegin((e) => {
-      onDragStart(e.x, e.y);
-    })
-    .onUpdate((e) => {
-      onDragUpdate(e.x, e.y);
-    })
-    .onEnd(() => {
-      onDragEnd();
-    })
-    .onFinalize(() => {
-      // Ensure cleanup happens even if gesture fails
-      onDragEnd();
-    });
+    .minDistance(0)
+    .onBegin((e) => { runOnJS(onDragStart)(e.x, e.y); })
+    .onUpdate((e) => { runOnJS(onDragUpdate)(e.x, e.y); })
+    .onEnd(() => { runOnJS(onDragEnd)(); })
+    .onFinalize(() => { runOnJS(onDragEnd)(); });
 
   return (
     <View style={styles.container}>
@@ -491,28 +486,27 @@ export default function GameScreen({ onBackToStart, mapSize = DEFAULT_GRID_SIZE 
               ]}
             />
           ))}
-          {dragRect && (
-            <View
-              style={[
-                styles.dragOverlay,
-                {
-                  left: Math.min(dragRect.x1, dragRect.x2),
-                  top: Math.min(dragRect.y1, dragRect.y2),
-                  width: Math.abs(dragRect.x2 - dragRect.x1),
-                  height: Math.abs(dragRect.y2 - dragRect.y1),
-                },
-              ]}
-            >
-              <View style={styles.sumBadgeWrapper}>
-                <Text style={[
-                  styles.sumBadge,
-                  currentSum.sum === step && styles.sumBadgePerfect,
-                ]}>
-                  {currentSum.sum}
-                </Text>
+          {selection && isDragging && (() => {
+            const minRow = Math.min(selection.startRow, selection.endRow);
+            const maxRow = Math.max(selection.startRow, selection.endRow);
+            const minCol = Math.min(selection.startCol, selection.endCol);
+            const maxCol = Math.max(selection.startCol, selection.endCol);
+            const cellStep = CELL_SIZE + CELL_MARGIN * 2;
+            return (
+              <View pointerEvents="none" style={[styles.dragOverlay, {
+                left: minCol * cellStep,
+                top: minRow * cellStep,
+                width: (maxCol - minCol + 1) * cellStep - CELL_MARGIN * 2,
+                height: (maxRow - minRow + 1) * cellStep - CELL_MARGIN * 2,
+              }]}>
+                <View style={styles.sumBadgeWrapper}>
+                  <Text style={[styles.sumBadge, currentSum.sum === step && styles.sumBadgePerfect]}>
+                    {currentSum.sum}
+                  </Text>
+                </View>
               </View>
-            </View>
-          )}
+            );
+          })()}
           {board.map((row, rowIndex) => (
             <View key={rowIndex} style={styles.row}>
               {row.map((cell, colIndex) => (
@@ -536,25 +530,26 @@ export default function GameScreen({ onBackToStart, mapSize = DEFAULT_GRID_SIZE 
 }
 
 // Separate Cell component for reanimated
-function Cell({ cell, anims, isSelected, cellSize }) {
-  const animatedStyle = useAnimatedStyle(() => ({
-    opacity: anims.opacity.value,
-    transform: [
-      { translateY: anims.translateY.value },
-      { scale: isSelected ? 0.95 : anims.scale.value },
-    ],
-  }));
+const Cell = React.memo(function Cell({ cell, anims, isSelected, cellSize }) {
+  // Reanimated 비활성화 - 일반 View 사용
+  // const animatedStyle = useAnimatedStyle(() => ({
+  //   opacity: anims.opacity.value,
+  //   transform: [
+  //     { translateY: anims.translateY.value },
+  //     { scale: anims.scale.value },
+  //   ],
+  // }), []);
 
   // Dynamic font sizes based on cell size
   const appleFontSize = Math.floor(cellSize * 0.55);
   const numberFontSize = Math.floor(cellSize * 0.32);
 
   return (
-    <Animated.View
+    <View
       style={[
         styles.cell,
         { width: cellSize, height: cellSize },
-        animatedStyle,
+        // animatedStyle,
         isSelected && styles.cellSelected,
       ]}
     >
@@ -568,12 +563,17 @@ function Cell({ cell, anims, isSelected, cellSize }) {
           <Text style={[styles.number, { fontSize: numberFontSize }]}>{cell.value}</Text>
         </>
       )}
-    </Animated.View>
+    </View>
   );
-}
+}, (prevProps, nextProps) => {
+  return prevProps.cell.value === nextProps.cell.value &&
+         prevProps.cell.removed === nextProps.cell.removed &&
+         prevProps.isSelected === nextProps.isSelected &&
+         prevProps.cellSize === nextProps.cellSize;
+});
 
 // Animated score display component
-function ScoreDisplay({ score, scale }) {
+const ScoreDisplay = React.memo(function ScoreDisplay({ score, scale }) {
   const animatedStyle = useAnimatedStyle(() => ({
     transform: [{ scale: scale.value }],
   }));
@@ -583,23 +583,29 @@ function ScoreDisplay({ score, scale }) {
       {score}
     </Animated.Text>
   );
-}
+});
 
 // Timer bar with hedgehog chasing farmer
-function TimerBar({ timeLeft, maxTime }) {
-  const progress = timeLeft / maxTime;
-  const fillColor = progress > 0.5 ? '#4CAF50' : progress > 0.3 ? '#FF9800' : '#FF4444';
+const TimerBar = React.memo(function TimerBar({ timeLeft, maxTime }) {
+  const fillStyle = useAnimatedStyle(() => {
+    const progress = timeLeft.value / maxTime;
+    const fillColor = progress > 0.5 ? '#4CAF50' : progress > 0.3 ? '#FF9800' : '#FF4444';
+    return {
+      width: `${progress * 100}%`,
+      backgroundColor: fillColor,
+    };
+  });
 
   return (
     <View style={timerStyles.container}>
       <Text style={timerStyles.emoji}>🦔</Text>
       <View style={timerStyles.track}>
-        <View style={[timerStyles.fill, { width: `${progress * 100}%`, backgroundColor: fillColor }]} />
+        <Animated.View style={[timerStyles.fill, fillStyle]} />
       </View>
       <Text style={timerStyles.emoji}>👨‍🌾</Text>
     </View>
   );
-}
+});
 
 const timerStyles = StyleSheet.create({
   container: {

@@ -2,7 +2,7 @@ import { Audio } from 'expo-av';
 
 let sound = null;
 let loading = false;
-let bgmEnabled = true;
+let bgmEnabled = false;
 
 async function _load() {
   if (sound || loading) return;
